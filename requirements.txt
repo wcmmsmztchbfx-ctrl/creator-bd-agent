@@ -1,0 +1,7 @@
+fastapi==0.162.0
+httpx==0.28.1
+playwright==1.64.1
+pydantic==2.14.2
+uvicorn==0.54.0
+xlsxwriter==3.3.1
+tzdata

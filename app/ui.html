@@ -1,0 +1,3139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>达人 BD 自动化 Agent - 智能协作工作台</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+    body { font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif; }
+    .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(12px); border: 1px solid rgba(226, 232, 240, 0.8); }
+    .badge-high { background-color: #ECFDF5; color: #047857; border: 1px solid #A7F3D0; }
+    .badge-mid { background-color: #FEF9C3; color: #B45309; border: 1px solid #FDE68A; }
+    .badge-reject { background-color: #FEF2F2; color: #B91C1C; border: 1px solid #FECACA; }
+    .custom-scrollbar::-webkit-scrollbar { width: 5px; height: 5px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #CBD5E1; border-radius: 4px; }
+    .hidden, [hidden] { display: none !important; }
+    #taskProgress { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 8px 12px; margin-top: 8px; background: rgba(241,245,249,.82); border: 1px solid #e2e8f0; border-radius: 6px; font-size: 11px; }
+    #taskProgressText { flex: 1; min-width: 160px; overflow-wrap: anywhere; }
+    #taskVerification { flex: 0 0 auto; padding: 10px 0; border-bottom: 1px solid #e2e8f0; font-size: 11px; overflow-wrap: anywhere; }
+    #taskVerification h3 { margin: 0 0 4px; font-size: 12px; }
+    #taskVerification p { margin: 4px 0; }
+    #candidateDrawer { position: absolute; inset: 0 0 0 auto; z-index: 35; width: clamp(320px, 24vw, 360px); box-sizing: border-box; background: #fff; border-left: 1px solid #cbd5e1; box-shadow: -8px 0 24px #0f172a12; display: flex; flex-direction: column; font-size: 12px; min-height: 0; }
+    #viewCHAT.drawer-open { padding-right: clamp(320px, 24vw, 360px); max-width: none; }
+    .drawer-head, .drawer-foot { padding: 10px 12px; flex: 0 0 auto; border-bottom: 1px solid #e2e8f0; }
+    .drawer-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+    .drawer-head h3 { margin: 0 0 3px; font-size: 13px; font-weight: 700; }
+    #candidateSummary { margin: 0; font-size: 10px; line-height: 1.4; color: #64748b; }
+    .drawer-foot { border-top: 1px solid #e2e8f0; border-bottom: 0; display: flex; flex-direction: column; gap: 6px; }
+    .candidate-filters { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 4px; padding: 8px 10px 6px; flex: 0 0 auto; }
+    .candidate-filter { min-width: 0; padding: 5px 2px; border: 1px solid #e2e8f0; border-radius: 6px; background: #f8fafc; color: #475569; font-size: 10.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+    .candidate-filter[aria-pressed="true"] { background: #ecfdf5; border-color: #a7f3d0; color: #047857; }
+    #candidateList { overflow-y: auto; flex: 1; min-height: 0; padding: 0 10px; }
+    .candidate-row { height: 70px; box-sizing: border-box; display: grid; grid-template-columns: 18px minmax(0,1fr) auto 12px; grid-template-rows: 24px 20px; column-gap: 6px; align-items: center; padding: 8px 0; border-bottom: 1px solid #e2e8f0; overflow: hidden; }
+    .candidate-row > input[type="checkbox"] { grid-row: 1 / 3; margin: 0; width: 14px; height: 14px; }
+    .candidate-name { grid-column: 2; grid-row: 1; min-width: 0; padding: 0; border: 0; background: none; color: #0f172a; font: inherit; font-weight: 650; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+    .candidate-status { grid-column: 3; grid-row: 1; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 999px; white-space: nowrap; }
+    .candidate-status.status-eligible { background: #ecfdf5; color: #047857; }
+    .candidate-status.status-pending { background: #fffbeb; color: #b45309; }
+    .candidate-status.status-rejected { background: #fef2f2; color: #b91c1c; }
+    .candidate-metrics { grid-column: 2 / 5; grid-row: 2; min-width: 0; color: #64748b; font-size: 10.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .candidate-open { grid-column: 4; grid-row: 1 / 3; padding: 0; border: 0; background: none; color: #94a3b8; font-size: 18px; line-height: 1; cursor: pointer; }
+    .candidate-empty { padding: 26px 10px; color: #64748b; font-size: 11px; line-height: 1.7; }
+    #candidateDetail { flex: 1; min-height: 0; overflow-y: auto; padding: 10px 12px 16px; }
+    .candidate-detail-bar { display: flex; align-items: center; gap: 6px; padding-bottom: 8px; border-bottom: 1px solid #e2e8f0; margin-bottom: 8px; }
+    .candidate-detail-bar strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+    .candidate-detail-bar button { font-size: 11px; }
+    .candidate-detail-section { margin: 0 0 10px; padding: 8px 9px; border: 1px solid #e2e8f0; border-radius: 7px; background: #f8fafc; }
+    .candidate-detail-section h4 { margin: 0 0 4px; font-size: 11px; }
+    .candidate-detail-section p { margin: 2px 0; overflow-wrap: anywhere; }
+    .candidate-detail-section dl { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 3px 8px; margin: 4px 0 0; }
+    .candidate-detail-section dt { color: #64748b; font-size: 10px; }
+    .candidate-detail-section dd { margin: 0; font-size: 11px; }
+    .candidate-detail-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .candidate-footer-line { display: flex; align-items: center; gap: 6px; }
+    #candidateSelectionCount { flex: 1; min-width: 0; font-size: 11px; color: #334155; }
+    #saveCandidateSelectionBtn { padding: 6px 8px; }
+    #confirmEnrichmentBtn { padding: 7px 9px; font-size: 11px; white-space: nowrap; }
+    .candidate-footer-status { display: flex; align-items: center; gap: 6px; }
+    #candidateActionStatus { flex: 1; min-width: 0; font-size: 10px; color: #64748b; overflow-wrap: anywhere; }
+    #reviewPendingBtn { padding: 4px 7px; font-size: 10px; white-space: nowrap; }
+    .candidate-controls, .workflow-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+    .workflow-toolbar { padding: 12px 0; font-size: 12px; }
+    .kb-number-filter { display: grid; gap: 3px; font-size: 11px; color: #475569; width: 116px; }
+    .workflow-toolbar input, .workflow-toolbar select, .workflow-toolbar button, .workflow-button { padding: 6px 9px; border: 1px solid #cbd5e1; border-radius: 6px; background: #fff; max-width: 100%; min-width: 0; }
+    .workflow-primary { background: #047857; color: white; border: 0; padding: 9px 12px; border-radius: 6px; }
+    button:disabled { opacity: .5; cursor: not-allowed; }
+    #enrichmentConfirmation { padding-top: 10px; border-top: 1px solid #cbd5e1; }
+    .workflow-error { color: #b91c1c; }
+    .workflow-muted { color: #64748b; }
+    .manual-reason { width: 100%; min-height: 44px; padding: 5px; border: 1px solid #cbd5e1; border-radius: 4px; resize: vertical; }
+    #excelSheetContainer { min-width: 0; max-width: 100%; overflow: auto; }
+    #excelTable { width: max-content; min-width: 3712px; border-collapse: collapse; }
+    #excelTable thead tr:last-child th, #excelTable tbody td { box-sizing: border-box; width: 112px; min-width: 112px; }
+    #excelTable thead tr:last-child th { white-space: nowrap; }
+    #excelTable thead tr:last-child th:first-child, #excelTable tbody td:first-child { width: 48px; min-width: 48px; }
+    #excelTable thead tr:last-child th:is(:nth-child(3), :nth-child(5), :nth-child(25)),
+    #excelTable tbody td:is(:nth-child(3), :nth-child(5), :nth-child(25)) { width: 244px; min-width: 244px; }
+    #excelTable thead tr:last-child th:nth-child(6), #excelTable tbody td:nth-child(6) { width: 220px; min-width: 220px; }
+    #excelTable thead tr:last-child th:nth-child(7), #excelTable tbody td:nth-child(7) { width: 176px; min-width: 176px; }
+    #excelTable thead tr:last-child th:is(:nth-child(4), :nth-child(10), :nth-child(12), :nth-child(22), :nth-child(23), :nth-child(24)),
+    #excelTable tbody td:is(:nth-child(4), :nth-child(10), :nth-child(12), :nth-child(22), :nth-child(23), :nth-child(24)) { width: 144px; min-width: 144px; }
+    #excelTable thead tr:last-child th:nth-child(11), #excelTable tbody td:nth-child(11) { width: 64px; min-width: 64px; }
+    #excelTable thead tr:last-child th:last-child, #excelTable tbody td:last-child { width: 96px; min-width: 96px; }
+    #excelTable select, #excelTable textarea { width: 100%; box-sizing: border-box; }
+    #excelTable tbody td:nth-child(2) > span { white-space: nowrap; }
+    #excelTable thead tr:last-child th.report-audience-column, #excelTable tbody td[data-report-audience] { width: 280px; min-width: 280px; }
+    .audience-summary, .contact-summary, .profile-summary { white-space: normal; overflow-wrap: anywhere; line-height: 1.6; }
+    .audience-summary p, .contact-summary p, .profile-summary p { margin: 2px 0; }
+    #kbNumericRequirements { flex-basis: 100%; border-top: 1px solid #e2e8f0; padding-top: 10px; }
+    #kbNumericFields { display: grid; grid-template-columns: repeat(auto-fit,minmax(130px,1fr)); gap: 10px; padding-top: 10px; }
+    #kbNumericFields label { display: grid; gap: 4px; }
+    #kbNumericFields input { width: 100%; box-sizing: border-box; }
+    @media (min-width: 768px) and (max-width: 1199px) { #viewCHAT.drawer-open { padding-right: 24px; } }
+    @media (max-width: 767px) {
+      body { margin: 0; display: flex; flex-direction: column; height: 100dvh !important; overflow: hidden; }
+      body > aside { width: 100% !important; height: auto; flex: 0 0 auto; border-right: 0; border-bottom: 1px solid #334155; }
+      body > aside > div:first-child { padding: 8px 12px; }
+      body > aside > div:first-child > div:first-child, body > aside > div:last-child { display: none; }
+      body > aside nav { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px; }
+      body > aside nav > button { width: 100%; margin: 0 !important; padding: 8px; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; line-height: 1.4; box-sizing: border-box; }
+      body > aside nav > button span { min-width: 0; overflow-wrap: anywhere; }
+      body > aside nav svg { width: 14px; height: 14px; flex-shrink: 0; }
+      body > main { display: flex; flex-direction: column; flex: 1; width: 100%; height: auto !important; min-width: 0; min-height: 0; overflow: hidden; }
+      main > section { display: flex; flex-direction: column; flex: 1; width: 100%; height: auto !important; min-width: 0; min-height: 0; padding: 12px !important; box-sizing: border-box; overflow: hidden; }
+      main > section.hidden { display: none; }
+      main > section > div { min-width: 0; min-height: 0; max-width: 100%; }
+      main > section > div:first-child { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; flex-shrink: 0; }
+      main > section > div:first-child > div, #viewREPORT > div > div, main h2 { min-width: 0; max-width: 100%; flex-wrap: wrap; }
+      #viewREPORT > div:nth-last-child(2) { display: flex; flex-wrap: wrap; gap: 8px; flex-shrink: 0; }
+      main input, main textarea, main select { min-width: 0; max-width: 100%; box-sizing: border-box; }
+      #chatMessages { flex: 1; min-height: 0; overflow-y: auto; }
+      #viewSETTINGS { overflow-y: auto; }
+      #viewSETTINGS > .glass-card { flex: 0 0 auto; }
+      #viewSETTINGS .glass-card > .flex:first-child { flex-wrap: wrap; gap: 12px; }
+      #viewSETTINGS label.relative { flex-shrink: 0; }
+      #viewREPORT > div:last-child, #viewKB > div:last-child { display: flex; flex-direction: column; flex: 1; min-width: 0; min-height: 0; overflow: hidden; }
+      #excelSheetContainer, #viewKB .overflow-x-auto { flex: 1; min-width: 0; min-height: 0; max-width: 100%; overflow: auto; }
+      #viewKB table { min-width: 800px; }
+      #viewCHAT.drawer-open { padding-right: 12px !important; }
+      #candidateDrawer { position: fixed; top: 0; bottom: 0; width: 100%; height: 100dvh; }
+      .drawer-foot { padding-bottom: max(10px, env(safe-area-inset-bottom)); }
+      .candidate-row { height: 72px; }
+      .workflow-toolbar > * { max-width: 100%; }
+      #viewKB .workflow-toolbar { flex: 0 0 auto; max-height: 48dvh; overflow-y: auto; }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 h-screen flex overflow-hidden">
+
+  <!-- Left Sidebar (左侧导航栏) -->
+  <aside class="w-64 bg-slate-900 text-slate-300 flex flex-col justify-between border-r border-slate-800 shrink-0 select-none z-20">
+    <div class="p-5">
+      <!-- App Brand -->
+      <div class="flex items-center gap-3 mb-8">
+        <div>
+          <h1 class="text-sm font-bold text-white tracking-tight flex items-center gap-1.5">
+            Creator BD
+            <span class="text-[10px] px-1.5 py-0.2 rounded font-medium bg-indigo-500/20 text-indigo-300 border border-indigo-400/30">AI</span>
+          </h1>
+          <p class="text-[11px] text-slate-400">达人 BD 自动化系统</p>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="space-y-1.5 text-xs font-semibold">
+        <button 
+          onclick="switchTab('CHAT')" 
+          id="navCHAT" 
+          class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all bg-indigo-600 text-white shadow-md shadow-indigo-600/20"
+        >
+          <i data-lucide="message-square-plus" class="w-4 h-4"></i>
+          <span>智能对话工作台</span>
+        </button>
+
+        <button 
+          onclick="switchTab('KB')" 
+          id="navKB" 
+          class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all text-slate-400 hover:text-white hover:bg-slate-800/80"
+        >
+          <i data-lucide="database" class="w-4 h-4"></i>
+          <span>达人全量知识库</span>
+        </button>
+
+        <button 
+          onclick="switchTab('REPORT')" 
+          id="navREPORT" 
+          class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all text-slate-400 hover:text-white hover:bg-slate-800/80"
+        >
+          <i data-lucide="award" class="w-4 h-4"></i>
+          <span>Agent 推荐报告</span>
+        </button>
+
+        <button 
+          onclick="switchTab('SETTINGS')" 
+          id="navSETTINGS" 
+          class="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl transition-all text-slate-400 hover:text-white hover:bg-slate-800/80"
+        >
+          <i data-lucide="settings" class="w-4 h-4"></i>
+          <span>接入与系统设置</span>
+        </button>
+      </nav>
+    </div>
+
+    <!-- Bottom Status Cards in Sidebar -->
+    <div id="sidebarPlatformStatus" class="p-4 m-3 rounded-xl bg-slate-800/60 border border-slate-700/60 text-[11px] space-y-2">
+      <div class="flex items-center justify-between text-slate-400 font-medium">
+        <span>平台连接状态</span>
+        <span id="platformConnectionSummary" class="text-slate-400">待同步</span>
+      </div>
+      <div class="flex items-center justify-between text-slate-300">
+        <span>抖音</span>
+        <span class="text-right min-w-0 break-words"><span id="sidebarDouyinConnection" class="block text-slate-400">能力待同步</span><span id="sidebarDouyinStatus">登录态待同步</span></span>
+      </div>
+      <div class="flex items-center justify-between text-slate-300">
+        <span>巨量星图</span>
+        <span class="text-right min-w-0 break-words"><span id="sidebarXingtuConnection" class="block text-slate-400">能力待同步</span><span id="sidebarXingtuStatus">登录态待同步</span></span>
+      </div>
+      <div class="flex items-center justify-between text-slate-300">
+        <span>SQLite 知识库</span>
+        <span class="text-sky-400 font-medium">就绪</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Right Main Content Area -->
+  <main class="flex-1 flex flex-col h-full overflow-hidden bg-slate-50 relative">
+
+    <!-- ==================== VIEW 1: 智能对话工作台 ==================== -->
+    <section id="viewCHAT" class="flex-1 flex flex-col h-full overflow-hidden p-6 max-w-5xl w-full mx-auto">
+      <div class="flex items-center justify-between pb-4 border-b border-slate-200 shrink-0">
+        <div>
+          <h2 class="text-base font-bold text-slate-900">智能找人工作台</h2>
+          <p class="text-xs text-slate-500">需求确认 · 数值初筛 · 候选复核</p>
+          <p id="platformHeaderStatus" class="text-xs text-slate-500 break-words" role="status">平台状态待同步</p>
+        </div>
+        <button onclick="clearChat()" class="text-xs text-slate-500 hover:text-slate-800 flex items-center gap-1 px-2.5 py-1.5 rounded-lg border border-slate-200 bg-white shadow-xs">
+          <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+          <span>清空对话</span>
+        </button>
+      </div>
+
+      <div id="taskProgress" class="hidden" role="status" aria-live="polite">
+        <span id="taskProgressText"></span>
+        <button id="progressCandidatesBtn" class="workflow-button" onclick="openCandidateDrawer(activeTaskId)">查看候选达人</button>
+        <button id="stopTaskBtn" class="workflow-button" onclick="stopCurrentTask()" title="停止当前搜索"><i data-lucide="square" class="w-3 h-3 inline"></i> 停止搜索</button>
+      </div>
+
+      <section id="taskVerification" class="hidden" aria-label="任务人工验证" aria-busy="false">
+        <h3 id="taskVerificationTitle"></h3>
+        <p id="taskVerificationStatus" role="status" aria-live="polite"></p>
+        <p class="workflow-muted">请在打开的浏览器任务搜索页手动完成验证。验证期间请保持窗口打开；成功后保存会话，超时/取消保留旧凭据；采集不会自动重启。完成后请重新执行原任务。取消验证后可重试，不会切换账号。</p>
+        <div class="candidate-controls">
+          <button id="refreshTaskVerificationBtn" class="workflow-button" onclick="loadPlatformStatus()" title="刷新验证进度" aria-label="刷新验证进度"><i data-lucide="refresh-cw" class="w-3 h-3"></i></button>
+          <button id="retryTaskVerificationBtn" class="workflow-button" onclick="runTaskVerification()"><i data-lucide="external-link" class="w-3 h-3 inline"></i> 重新打开人工验证</button>
+          <button id="cancelTaskVerificationBtn" class="workflow-button" onclick="runTaskVerification(true)"><i data-lucide="x" class="w-3 h-3 inline"></i> 取消验证</button>
+        </div>
+      </section>
+
+      <!-- Messages Thread -->
+      <div id="chatMessages" class="flex-1 overflow-y-auto custom-scrollbar py-4 space-y-4 pr-1">
+        <!-- Messages rendered by JS -->
+      </div>
+
+      <!-- Input Bar & Prompt Suggestions -->
+      <div class="shrink-0 pt-3 space-y-3">
+        <!-- Quick Prompts -->
+        <div class="flex flex-wrap items-center gap-2 text-xs">
+          <span class="text-slate-400 font-medium">快捷需求:</span>
+          <button onclick="sendQuickPrompt('帮我找5位食品测评类达人，均赞1万以上')" class="px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-indigo-400 text-slate-700 hover:text-indigo-600 transition-all shadow-xs">
+            食品测评 (均赞1w+)
+          </button>
+          <button onclick="sendQuickPrompt('挖掘3位高互动的食品安全科普博主')" class="px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-indigo-400 text-slate-700 hover:text-indigo-600 transition-all shadow-xs">
+            食品安全科普
+          </button>
+          <button onclick="sendQuickPrompt('寻找近两周活跃、有商业微信的零食开箱达人')" class="px-2.5 py-1 rounded-lg bg-white border border-slate-200 hover:border-indigo-400 text-slate-700 hover:text-indigo-600 transition-all shadow-xs">
+            零食开箱 (有微信)
+          </button>
+        </div>
+
+        <!-- Chat Input Form -->
+        <div class="glass-card rounded-2xl p-2 shadow-sm border border-slate-200 flex items-end gap-2">
+          <textarea 
+            id="chatInput" 
+            rows="2"
+            placeholder="用自然语言描述您的投放诉求（例如：帮我找5位食品测评达人，均赞1万以上，要近期有更新的）... [按回车发送]"
+            class="flex-1 p-2.5 text-xs bg-transparent focus:outline-none resize-none text-slate-800 placeholder-slate-400"
+            onkeydown="if(event.key === 'Enter' && !event.shiftKey && !event.isComposing && event.keyCode !== 229) { event.preventDefault(); sendChatMessage(); }"
+          ></textarea>
+          <button 
+            id="chatSendBtn"
+            onclick="sendChatMessage()"
+            class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-indigo-100 transition-all cursor-pointer whitespace-nowrap self-end"
+          >
+            <span>发送需求</span>
+            <i data-lucide="send" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 2: 达人全量知识库 ==================== -->
+    <section id="viewKB" class="flex-1 flex flex-col h-full overflow-hidden p-6 hidden">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-200 shrink-0">
+        <div>
+          <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+            达人全量知识库
+            <span id="kbCountBadge" class="text-xs px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-semibold">0</span>
+          </h2>
+          <p class="text-xs text-slate-500">统一归档所有任务采集沉淀的达人资产（一人一档），支持多维检索与留资复用</p>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <div class="relative w-64">
+            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+            <input 
+              id="kbSearchInput" 
+              type="text" 
+              placeholder="搜索达人昵称 / 抖音号 / 简介..." 
+              oninput="filterKnowledgeBase()"
+              class="w-full pl-9 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+            >
+          </div>
+          <button onclick="loadKnowledgeBase()" class="p-2 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl text-slate-600 shadow-xs" title="刷新知识库">
+            <i data-lucide="refresh-cw" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="workflow-toolbar">
+        <input id="kbTagFilter" aria-label="标签筛选" placeholder="标签" oninput="filterKnowledgeBase()">
+        <select id="kbEnrichmentFilter" aria-label="星图状态筛选" onchange="filterKnowledgeBase()">
+          <option value="">全部星图状态</option><option value="completed">已补全</option><option value="not_found">未收录</option>
+          <option value="permission_denied">无权限</option><option value="identity_unconfirmed">身份未确认</option>
+          <option value="failed">获取失败</option><option value="unavailable">未接入</option>
+        </select>
+        <label class="kb-number-filter">粉丝量下限<input id="kbFilterMinFollowers" type="number" min="0" step="1" placeholder="不限" onchange="filterKnowledgeBase()"></label>
+        <label class="kb-number-filter">粉丝量上限<input id="kbFilterMaxFollowers" type="number" min="0" step="1" placeholder="不限" onchange="filterKnowledgeBase()"></label>
+        <label class="kb-number-filter">均赞下限<input id="kbFilterMinAvgLikes" type="number" min="0" step="1" placeholder="不限" onchange="filterKnowledgeBase()"></label>
+        <label class="kb-number-filter">更新距今 (天内)<input id="kbFilterUpdatedDays" type="number" min="1" max="3650" step="1" placeholder="不限" onchange="filterKnowledgeBase()"></label>
+        <span id="kbFilterStatus" role="status" class="workflow-error"></span>
+        <span id="kbSelectionCount">已选 0 人</span>
+        <select id="kbImportMode" aria-label="批量加入方式" onchange="updateKBImportMode()">
+          <option value="existing">加入已有报告</option><option value="new">按新需求建报告</option><option value="list">仅生成资料清单</option>
+        </select>
+        <select id="kbImportTask" aria-label="已有任务"><option value="">选择任务</option></select>
+        <input id="kbImportBrief" class="hidden" aria-label="新需求" placeholder="新需求">
+        <button id="kbImportBtn" onclick="importKBSelection()" disabled><i data-lucide="list-plus" class="w-3 h-3 inline"></i> 确认加入</button>
+        <span id="kbImportStatus" role="status"></span>
+        <button id="kbPendingBtn" class="hidden" onclick="openCandidateDrawer(kbPendingTaskId)">查看待处理达人</button>
+        <button id="kbReportBtn" class="hidden" onclick="goToReportTab(kbPendingTaskId)">查看正式报告</button>
+        <div id="kbNumericRequirements" class="hidden">
+          <label><input id="kbStructuredRequirements" type="checkbox" onchange="updateKBNumericFields()"> 设置明确数值条件</label>
+          <span class="workflow-muted">仅按数值规则判定，不代表语义匹配；未设置时保留为待核实需求。</span>
+          <div id="kbNumericFields" class="hidden">
+            <label>最终交付目标<input id="kbTargetCount" type="number" min="1" max="50" step="1" value="5"></label>
+            <label>粉丝量下限<input id="kbMinFollowers" type="number" min="0" max="1000000000000" step="1" value="0"></label>
+            <label>粉丝量上限<input id="kbMaxFollowers" type="number" min="0" max="1000000000000" step="1" placeholder="不限制"></label>
+            <label>均赞门槛<input id="kbMinAvgLikes" type="number" min="0" max="1000000000000" step="1" value="0"></label>
+            <label>最高赞门槛<input id="kbMinMaxLikes" type="number" min="0" max="1000000000000" step="1" value="0"></label>
+            <label>活跃天数<input id="kbActiveDays" type="number" min="1" max="3650" step="1" placeholder="不限制"></label>
+          </div>
+        </div>
+      </div>
+
+      <!-- KB Table -->
+      <div class="flex-1 glass-card rounded-2xl shadow-sm overflow-hidden flex flex-col mt-4">
+        <div class="overflow-x-auto custom-scrollbar flex-1">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead>
+              <tr class="bg-slate-100/70 text-slate-600 font-semibold border-b border-slate-200 sticky top-0 z-10 backdrop-blur-xs">
+                <th class="py-3 px-4"><input id="kbSelectAll" type="checkbox" aria-label="全选当前知识库" onchange="selectAllKB(this.checked)"></th>
+                <th class="py-3 px-4">达人主档 (昵称 / 抖音号)</th>
+                <th class="py-3 px-4">粉丝量 / 总获赞</th>
+                <th class="py-3 px-4">最新样本表现 (均赞/最高)</th>
+                <th class="py-3 px-4">活跃周期</th>
+                <th class="py-3 px-4">商业合作联系</th>
+                <th class="py-3 px-4">星图资格</th>
+                <th class="py-3 px-4">入库时间</th>
+                <th class="py-3 px-4">标签</th>
+              </tr>
+            </thead>
+            <tbody id="kbTableBody" class="divide-y divide-slate-200/80 bg-white">
+              <!-- Rendered by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 3: Agent 推荐报告 (Excel 交互工作表) ==================== -->
+    <section id="viewREPORT" class="flex-1 flex flex-col h-full overflow-hidden p-6 hidden">
+      <!-- Toolbar -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200 shrink-0">
+        <div>
+          <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+            <span>正式推荐报告</span>
+            <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">Excel 交互模式</span>
+          </h2>
+          <p id="reportDeliverySummary" class="text-xs text-slate-500">暂无正式交付</p>
+        </div>
+
+        <div class="flex items-center gap-2 flex-wrap">
+          <!-- Task Switcher Dropdown -->
+          <select 
+            id="reportTaskSelect" 
+            onchange="loadTaskReport(this.value)"
+            class="py-2 px-3 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-700 font-semibold shadow-xs"
+          >
+            <!-- Populated by JS -->
+          </select>
+
+          <!-- Add Empty Row Button -->
+          <button 
+            onclick="addNewReportRow()" 
+            class="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl shadow-xs transition-all cursor-pointer whitespace-nowrap"
+            title="从知识库选择达人"
+          >
+            <i data-lucide="plus" class="w-4 h-4 text-indigo-600"></i>
+            <span>从知识库补选</span>
+          </button>
+
+          <!-- Save All Changes Button -->
+          <button 
+            id="btnSaveAll"
+            onclick="saveAllReportChanges()" 
+            class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 rounded-xl shadow-md shadow-indigo-100 transition-all cursor-pointer whitespace-nowrap"
+          >
+            <i data-lucide="save" class="w-4 h-4"></i>
+            <span id="saveBtnLabel">保存表格修改</span>
+          </button>
+
+          <!-- Export Excel Button -->
+          <button 
+            id="btnExportReport" disabled
+            onclick="downloadCurrentReportExcel()" 
+            class="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 rounded-xl shadow-md shadow-emerald-100 transition-all cursor-pointer whitespace-nowrap"
+          >
+            <i data-lucide="file-spreadsheet" class="w-4 h-4"></i>
+            <span>导出最新 Excel</span>
+          </button>
+
+          <!-- Refresh/Reset -->
+          <button 
+            onclick="loadTaskReport(currentSelectedTaskId)" 
+            class="p-2 text-slate-500 hover:text-slate-800 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl shadow-xs transition-all cursor-pointer"
+            title="撤销未保存改动并重载"
+          >
+            <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Summary Formula Bar (Excel 顶部状态条) -->
+      <div class="my-3 px-4 py-2.5 bg-slate-100/90 border border-slate-200 rounded-xl flex items-center justify-between text-xs shrink-0 flex-wrap gap-2">
+        <div class="flex items-center gap-4 text-slate-600 font-medium">
+          <span class="flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+            正式条目: <strong id="repStatTotal" class="text-slate-900 font-bold">0</strong> 人
+          </span>
+          <span class="flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+            高推荐优选: <strong id="repStatHigh" class="text-emerald-700 font-bold">0</strong> 人
+          </span>
+          <span class="flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-amber-500"></span>
+            中推荐储备: <strong id="repStatMid" class="text-amber-700 font-bold">0</strong> 人
+          </span>
+          <span class="flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-rose-500"></span>
+            淘汰休眠: <strong id="repStatRej" class="text-rose-700 font-bold">0</strong> 人
+          </span>
+        </div>
+
+        <div class="flex items-center gap-4 text-slate-600 font-medium font-mono text-[11px]">
+          <span>21-60s均价: <strong id="repSummaryAvgPrice" class="text-indigo-700 font-bold">¥0</strong></span>
+          <span>·</span>
+          <span>播放中位均值: <strong id="repSummaryAvgVV" class="text-slate-800 font-bold">0</strong></span>
+          <span>·</span>
+          <span>已加微建联: <strong id="repSummaryWechatCount" class="text-emerald-700 font-bold">0</strong> 人</span>
+        </div>
+      </div>
+
+      <!-- Filter Tabs & In-Sheet Search -->
+      <div class="flex items-center justify-between gap-3 mb-3 shrink-0">
+        <div class="flex items-center gap-1 p-1 bg-slate-200/60 rounded-xl text-xs font-semibold text-slate-600">
+          <button onclick="setReportFilter('ALL')" id="repTabALL" class="px-3 py-1 rounded-lg bg-white text-slate-900 shadow-sm transition-all">全部达人</button>
+          <button onclick="setReportFilter('高推荐')" id="repTabHIGH" class="px-3 py-1 rounded-lg hover:text-slate-900 transition-all">高推荐</button>
+          <button onclick="setReportFilter('中推荐')" id="repTabMID" class="px-3 py-1 rounded-lg hover:text-slate-900 transition-all">中推荐</button>
+          <button onclick="setReportFilter('待核实')" id="repTabCHK" class="px-3 py-1 rounded-lg hover:text-slate-900 transition-all">待核实</button>
+          <button onclick="setReportFilter('淘汰')" id="repTabREJ" class="px-3 py-1 rounded-lg hover:text-slate-900 transition-all">已淘汰</button>
+        </div>
+
+        <div class="relative w-64">
+          <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5"></i>
+          <input 
+            type="text" 
+            id="reportSearchInput" 
+            oninput="handleReportSearch(this.value)"
+            placeholder="搜索表格达人 / 垂类 / 微信..." 
+            class="w-full pl-8 pr-3 py-1.5 text-xs bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 text-slate-800"
+          >
+        </div>
+      </div>
+
+      <!-- Excel Spreadsheet Table Container -->
+      <div class="flex-1 bg-white border border-slate-300 rounded-xl shadow-xs overflow-hidden flex flex-col">
+        <div class="overflow-auto custom-scrollbar flex-1 relative" id="excelSheetContainer">
+          <table class="w-full border-collapse text-left select-text" id="excelTable">
+            <thead>
+              <!-- Category Header Row 1 (Merged Groups) -->
+              <tr class="sticky top-0 z-20 text-white font-bold select-none text-xs">
+                <th class="bg-slate-800 text-center py-2 px-3 border border-slate-700 sticky left-0 z-30 w-12">#</th>
+                <th colspan="5" class="bg-emerald-800 text-center py-2 px-3 border border-emerald-700">推荐决策 (数值规则与人工判断)</th>
+                <th colspan="5" class="bg-sky-800 text-center py-2 px-3 border border-sky-700">达人档案 (基础信息与主页)</th>
+                <th colspan="6" class="bg-purple-800 text-center py-2 px-3 border border-purple-700">星图商业与报价 (商业变现指标)</th>
+                <th colspan="4" class="bg-amber-800 text-center py-2 px-3 border border-amber-700">内容与活跃表现 (近期作品表现)</th>
+                <th colspan="4" class="bg-rose-800 text-center py-2 px-3 border border-rose-700">商务建联与跟进 (BD 团队跟进记录)</th>
+                <th class="bg-slate-800 text-center py-2 px-3 border border-slate-700 w-24">操作</th>
+              </tr>
+              <!-- Column Sub-header Row 2 -->
+              <tr class="sticky top-[33px] z-20 bg-slate-100 text-slate-700 font-bold text-xs select-none border-b border-slate-300">
+                <th class="py-2 px-2 text-center border border-slate-300 sticky left-0 bg-slate-100 z-30 w-12 text-slate-500">序号</th>
+                <!-- 推荐决策 -->
+                <th class="py-2 px-2 border border-slate-300 w-28 text-emerald-900 bg-emerald-50/70">原始数值规则</th>
+                <th class="py-2 px-3 border border-slate-300 w-64 text-emerald-900 bg-emerald-50/70">原始规则依据</th>
+                <th class="py-2 px-2 border border-slate-300 w-28">人工最终等级</th>
+                <th class="py-2 px-3 border border-slate-300 w-64">人工判断理由</th>
+                <th class="py-2 px-3 border border-slate-300 w-48 text-emerald-900 bg-emerald-50/70">投放风险提示</th>
+                <!-- 达人档案 -->
+                <th class="py-2 px-3 border border-slate-300 w-44 text-sky-900 bg-sky-50/70">达人昵称</th>
+                <th class="py-2 px-3 border border-slate-300 w-32 text-sky-900 bg-sky-50/70">抖音号</th>
+                <th class="py-2 px-3 border border-slate-300 w-24 text-sky-900 bg-sky-50/70">粉丝量</th>
+                <th class="py-2 px-3 border border-slate-300 w-36 text-sky-900 bg-sky-50/70">核心垂类标签</th>
+                <th class="py-2 px-2 border border-slate-300 w-16 text-center text-sky-900 bg-sky-50/70">主页</th>
+                <!-- 星图商业与报价 -->
+                <th class="py-2 px-3 border border-slate-300 w-36 text-purple-900 bg-purple-50/70">星图达人 ID</th>
+                <th class="py-2 px-3 border border-slate-300 w-28 text-purple-900 bg-purple-50/70">1-20s报价(￥)</th>
+                <th class="py-2 px-3 border border-slate-300 w-28 text-purple-900 bg-purple-50/70">21-60s报价(￥)</th>
+                <th class="py-2 px-3 border border-slate-300 w-32 text-purple-900 bg-purple-50/70">30天播放中位</th>
+                <th class="py-2 px-2 border border-slate-300 w-24 text-purple-900 bg-purple-50/70">预期CPM</th>
+                <th class="report-audience-column py-2 px-3 border border-slate-300 text-purple-900 bg-purple-50/70">粉丝画像（性别 / 年龄 / 省份）</th>
+                <!-- 内容与活跃表现 -->
+                <th class="py-2 px-3 border border-slate-300 w-28 text-amber-900 bg-amber-50/70">样本均赞</th>
+                <th class="py-2 px-3 border border-slate-300 w-28 text-amber-900 bg-amber-50/70">样本最高赞</th>
+                <th class="py-2 px-3 border border-slate-300 w-28 text-amber-900 bg-amber-50/70">最新作品日</th>
+                <th class="py-2 px-3 border border-slate-300 w-28 text-amber-900 bg-amber-50/70">活跃状态</th>
+                <!-- 商务建联与跟进 -->
+                <th class="py-2 px-3 border border-slate-300 w-36 text-rose-900 bg-rose-50/70">商务微信</th>
+                <th class="py-2 px-3 border border-slate-300 w-32 text-rose-900 bg-rose-50/70">联系电话</th>
+                <th class="py-2 px-2 border border-slate-300 w-32 text-rose-900 bg-rose-50/70">BD跟进状态</th>
+                <th class="py-2 px-3 border border-slate-300 w-56 text-rose-900 bg-rose-50/70">跟进备注说明</th>
+                <th class="py-2 px-2 border border-slate-300 text-center w-24">操作</th>
+              </tr>
+            </thead>
+            <tbody id="reportTableBody" class="divide-y divide-slate-200 text-xs">
+              <!-- Rendered by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================== VIEW 4: 系统设置与接入配置 ==================== -->
+    <section id="viewSETTINGS" class="flex-1 flex flex-col h-full overflow-y-auto p-6 max-w-4xl w-full mx-auto custom-scrollbar hidden space-y-6">
+      <div class="pb-4 border-b border-slate-200">
+        <h2 class="text-base font-bold text-slate-900">系统设置与接入配置</h2>
+        <p class="text-xs text-slate-500">模型接入配置、平台接入状态与 BD 规则阈值</p>
+      </div>
+
+      <!-- Card 1: 大模型 API 接入 -->
+      <div class="glass-card rounded-2xl p-5 shadow-sm space-y-4">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-100">
+          <div>
+            <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+              大模型 API 接入配置
+            </h3>
+            <p class="text-xs text-slate-500 mt-0.5">兼容 Chat Completions 接口；仅用于对话与需求整理，不进行 AI 内容评价</p>
+          </div>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input type="checkbox" id="cfgLlmEnabled" class="sr-only peer">
+            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+            <span class="ml-2 text-xs font-semibold text-slate-700">启用外部 API</span>
+          </label>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">模型提供商 (Provider)</label>
+            <select id="cfgLlmProvider" onchange="autoFillProviderDefaults(this.value)" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-medium">
+              <option value="DeepSeek">DeepSeek (深度求索)</option>
+              <option value="OpenAI">OpenAI (ChatGPT)</option>
+              <option value="Qwen">通义千问 (阿里云)</option>
+              <option value="Custom">自定义兼容接口 (Custom)</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">模型名称 (Model)</label>
+            <input id="cfgLlmModel" type="text" placeholder="deepseek-chat" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="block font-semibold text-slate-700 mb-1">Base URL (接口地址)</label>
+            <input id="cfgLlmBaseUrl" type="text" placeholder="https://api.deepseek.com/v1" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono">
+          </div>
+
+          <div class="md:col-span-2">
+            <label class="block font-semibold text-slate-700 mb-1">API Key</label>
+            <div class="relative">
+              <input id="cfgLlmApiKey" type="password" placeholder="sk-..." class="w-full p-2.5 pr-10 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20 font-mono">
+              <button onclick="togglePasswordVis('cfgLlmApiKey')" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                <i data-lucide="eye" class="w-4 h-4"></i>
+              </button>
+            </div>
+            <label class="mt-2 flex items-center gap-2 text-slate-600"><input id="cfgClearLlmKey" type="checkbox">清除已保存的 API Key</label>
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-2 text-xs">
+          <button id="btnTestLlm" onclick="testLlmConnection()" class="px-3 py-2 border border-slate-200 rounded-lg flex items-center gap-1.5 disabled:opacity-50"><i data-lucide="plug-zap" class="w-4 h-4"></i>测试连接</button>
+          <button id="btnPreviewPrompt" onclick="previewSystemPrompt()" class="px-3 py-2 border border-slate-200 rounded-lg flex items-center gap-1.5 disabled:opacity-50"><i data-lucide="file-text" class="w-4 h-4"></i>系统提示词</button>
+        </div>
+        <p id="llmTestStatus" role="status" class="text-xs text-slate-600 break-words"></p>
+        <pre id="systemPromptPreview" class="hidden whitespace-pre-wrap break-words text-xs bg-slate-50 border border-slate-200 rounded-lg p-3 max-h-64 overflow-y-auto"></pre>
+      </div>
+
+      <!-- 平台认证与凭证管理 -->
+      <div class="space-y-4">
+        <div class="pb-3 border-b border-slate-200 flex items-center justify-between gap-3">
+          <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+            平台认证与登录态管理
+          </h3>
+          <button id="refreshPlatformStatus" class="workflow-button" onclick="loadPlatformStatus()" title="刷新平台状态" aria-label="刷新平台状态"><i data-lucide="refresh-cw" class="w-4 h-4"></i></button>
+        </div>
+        <p id="platformStatusMessage" role="status" aria-live="polite" class="text-xs text-slate-600 break-words"></p>
+        <div id="platformCards" class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs"></div>
+      </div>
+
+      <!-- Card 3: 业务规则与阈值配置 -->
+      <div class="glass-card rounded-2xl p-5 shadow-sm space-y-4">
+        <div class="pb-3 border-b border-slate-100">
+          <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+            BD 筛选与淘汰阈值
+          </h3>
+          <p class="text-xs text-slate-500 mt-0.5">控制硬条件淘汰规则与数据采样的精度标准</p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">休眠淘汰判定天数 (天)</label>
+            <input id="cfgDormantLimit" type="number" value="60" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+            <span class="text-[10px] text-slate-400 mt-1 block">超过此天数未发新作品，硬规则直接判定为【淘汰】</span>
+          </div>
+
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">近期高活跃判定天数 (天)</label>
+            <input id="cfgActiveLimit" type="number" value="14" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500/20">
+            <span class="text-[10px] text-slate-400 mt-1 block">在此天数内有更新作品，给予高活跃标签与推荐加权</span>
+          </div>
+          <div>
+            <label for="cfgDynamicTTL" class="block font-semibold text-slate-700 mb-1">动态资料有效期 (小时)</label>
+            <input id="cfgDynamicTTL" type="number" min="1" max="8760" step="1" value="24" class="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl">
+          </div>
+        </div>
+      </div>
+
+      <!-- Save Button -->
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <button onclick="saveAllSettings()" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 text-white font-semibold rounded-xl text-xs shadow-md shadow-indigo-100 transition-all cursor-pointer">
+          保存全部配置
+        </button>
+      </div>
+    </section>
+
+    <aside id="candidateDrawer" class="hidden" aria-label="候选达人" tabindex="-1">
+      <header class="drawer-head">
+        <div style="min-width:0"><h3>候选达人</h3><p id="candidateSummary">正在加载候选…</p></div>
+        <div class="candidate-controls">
+          <button class="workflow-button" onclick="loadCandidates(candidateTaskId)" title="刷新候选" aria-label="刷新候选"><i data-lucide="refresh-cw" class="w-4 h-4"></i></button>
+          <button id="closeCandidateDrawerBtn" class="workflow-button" onclick="closeCandidateDrawer()" title="关闭候选栏" aria-label="关闭候选栏"><i data-lucide="x" class="w-4 h-4"></i></button>
+        </div>
+      </header>
+      <div id="candidateFilters" class="candidate-filters" role="group" aria-label="候选分类">
+        <button class="candidate-filter" data-candidate-filter="eligible" aria-pressed="true">可选 <span data-filter-count="eligible">0</span></button>
+        <button class="candidate-filter" data-candidate-filter="pending" aria-pressed="false">待核实 <span data-filter-count="pending">0</span></button>
+        <button class="candidate-filter" data-candidate-filter="rejected" aria-pressed="false">不符合 <span data-filter-count="rejected">0</span></button>
+      </div>
+      <div id="candidateList" class="custom-scrollbar" aria-live="polite"></div>
+      <section id="candidateDetail" class="custom-scrollbar" hidden aria-label="候选详情"></section>
+      <footer class="drawer-foot">
+        <div class="candidate-footer-line">
+          <span id="candidateSelectionCount">已选 0 位</span>
+          <button id="saveCandidateSelectionBtn" class="workflow-button" onclick="saveCandidateSelection()" title="保存选择" aria-label="保存选择" disabled><i data-lucide="save" class="w-4 h-4"></i></button>
+          <button id="confirmEnrichmentBtn" class="workflow-primary" onclick="confirmCandidateEnrichment()" disabled>确认补全</button>
+        </div>
+        <div class="candidate-footer-status">
+          <span id="candidateActionStatus" role="status"></span>
+          <button id="reviewPendingBtn" class="workflow-button hidden" onclick="requestCandidateReview()">补审待核实</button>
+        </div>
+        <div id="enrichmentConfirmation" class="hidden">
+          <p id="enrichmentConfirmationText"></p>
+          <div class="candidate-controls">
+            <button id="submitEnrichmentBtn" class="workflow-primary" onclick="submitCandidateEnrichment()">确认提交补全</button>
+            <button class="workflow-button" onclick="cancelCandidateEnrichment()">取消</button>
+          </div>
+        </div>
+      </footer>
+    </aside>
+  </main>
+
+  <!-- Evidence Modal -->
+  <div id="detailModal" class="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-xs hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl max-w-2xl w-full shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-150">
+      <div class="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+        <div class="flex items-center gap-3">
+          <img id="modalAvatar" src="" class="w-10 h-10 rounded-full object-cover border border-slate-200 shadow-xs">
+          <div>
+            <h3 id="modalName" class="text-sm font-bold text-slate-900">达人详情</h3>
+            <p id="modalId" class="text-xs text-slate-500"></p>
+          </div>
+        </div>
+        <button onclick="closeModal()" class="w-8 h-8 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 flex items-center justify-center transition-colors">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-6 overflow-y-auto space-y-5 custom-scrollbar text-xs">
+        <div class="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-slate-800 flex items-center gap-1.5">
+              规则筛选结果与数据依据
+            </span>
+            <span id="modalLevelBadge" class="px-2 py-0.5 rounded-full font-bold"></span>
+          </div>
+          <p id="modalReason" class="text-slate-700 leading-relaxed"></p>
+          <div class="pt-2 border-t border-slate-200/60 space-y-1 text-slate-600">
+            <div><span class="font-semibold text-rose-600">投放风险提示:</span> <span id="modalRisk"></span></div>
+            <div><span class="font-semibold text-amber-600">信息缺项:</span> <span id="modalMissing"></span></div>
+          </div>
+        </div>
+
+        <div>
+          <h4 class="font-semibold text-slate-900 mb-2">粉丝画像与星图联系证据</h4>
+          <div id="modalXingtuDetails"></div>
+        </div>
+
+        <div>
+          <h4 class="font-semibold text-slate-900 mb-1 flex items-center gap-1">
+            个人主页公开简介原文
+          </h4>
+          <p id="modalBio" class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-slate-600 whitespace-pre-wrap font-mono text-[11px]"></p>
+        </div>
+
+        <div>
+          <h4 class="font-semibold text-slate-900 mb-2 flex items-center gap-1">
+            抓取的近期代表作样本 (证据依据)
+          </h4>
+          <div id="modalPostsContainer" class="space-y-2"></div>
+        </div>
+      </div>
+
+      <div class="p-4 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
+        <a id="modalProfileLink" href="#" target="_blank" rel="noopener noreferrer" class="text-indigo-600 hover:text-indigo-800 font-semibold inline-flex items-center gap-1">
+          <span>在抖音中打开主页</span>
+          <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+        </a>
+        <button onclick="closeModal()" class="px-4 py-2 bg-slate-200 hover:bg-slate-300 rounded-xl font-medium text-slate-700 transition-colors">
+          关闭
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-6 right-6 z-50 bg-slate-900 text-white px-4 py-2.5 rounded-xl text-xs font-medium shadow-xl flex items-center gap-2 hidden transition-all">
+    <span id="toastMsg">微信号已复制到剪贴板！</span>
+  </div>
+
+  <!-- JavaScript Logic -->
+  <script>
+    let currentTab = 'CHAT';
+    let currentReportFilter = 'ALL';
+    let reportCreators = [];
+    let kbCreators = [];
+    let currentSelectedTaskId = null;
+    let pollInterval = null;
+    let isSendingChat = false;
+    let taskCardSequence = 0;
+    const taskCards = new Map();
+    let activeTaskId = null;
+    try { activeTaskId = validId(sessionStorage.getItem('creator-bd-active-task')); } catch (e) {}
+    let activeTask = null;
+    const platformNames = {douyin: '抖音', xingtu: '巨量星图'};
+    let platformViews = {};
+    const platformActionErrors = {};
+    let platformStatusError = '';
+    let platformLoadPromise = null;
+    let platformLoading = false;
+    let platformPendingAction = null;
+    let platformPollTimer = null;
+    let platformSearchRunning = false;
+    let taskVerification = null;
+    let navigationRevision = 0;
+    let inFlightEnrichment = null;
+    let progressReceivedAt = 0;
+    let progressConnected = true;
+    let statusChecking = false;
+    let candidateTaskId = null;
+    let candidateTask = null;
+    let candidateCreators = [];
+    let candidatesLoaded = false;
+    let candidateLoadError = '';
+    let drawerReturnFocus = null;
+    const drawerInertStates = new Map();
+    const drawerMobileMedia = window.matchMedia('(max-width: 767px)');
+    let candidateLoadSequence = 0;
+    let candidateFilter = 'eligible';
+    let candidateSummary = {};
+    let candidateDetailId = null;
+    let candidateListScrollTop = 0;
+    let candidateDetailReturnFocus = null;
+    let enrichmentSubmitting = false;
+    let selectionSaving = false;
+    let confirmedBatch = null;
+    let kbPendingTaskId = null;
+    let kbImportBusy = false;
+    let kbLoadSequence = 0;
+    let kbLoaded = false;
+    const candidateChoices = new Map();
+    const candidateAdmissionProblems = new Map();
+    const kbSelection = new Set();
+    const enrichmentLabels = {completed: '已补全', not_found: '未收录', permission_denied: '无权限',
+      identity_unconfirmed: '身份未确认', failed: '获取失败', unavailable: '暂不可用',
+      queued: '等待补全', running: '补全中', enriching: '补全中'};
+    const phaseLabels = {queued: '排队', running: '检索中', searching: '检索内容',
+      reading: '读取主页/作品', screening: '数值初筛', stopping: '正在停止',
+      completed: '候选待选择', candidates_ready: '候选待选择', awaiting_selection: '候选待选择',
+      stopped: '已停止', partial: '检索未完整完成', blocked: '检索受阻，需要人工验证', failed: '失败', interrupted: '已中断',
+      enriching: '星图补全', enriched: '补全已结束'};
+
+    function validId(value) {
+      const id = Number(value);
+      return Number.isSafeInteger(id) && id > 0 ? id : null;
+    }
+
+    function searchEnded(task) {
+      return !!task && ['completed', 'stopped', 'partial', 'blocked', 'failed', 'interrupted',
+        'candidates_ready', 'awaiting_selection', 'enriched'].includes(task.status);
+    }
+
+    function enrichmentOutcome(task) {
+      const progress = task.progress || {};
+      const count = value => Number.isSafeInteger(value) && value >= 0 ? value : null;
+      const requested = count(progress.enrichment_requested);
+      const processed = count(progress.enrichment_processed);
+      const failed = count(progress.enrichment_failed);
+      const report = count(task.counts?.report);
+      let succeeded = count(progress.enrichment_succeeded);
+      // Failed refreshes may not be processed; only infer success for a fully counted batch.
+      if (succeeded === null && requested > 0 && failed !== null && failed <= requested) {
+        if (processed === requested) succeeded = requested - failed;
+        else if (failed === requested) succeeded = 0;
+      }
+      if (!requested || succeeded > requested) succeeded = null;
+      const allSucceeded = requested > 0 && succeeded === requested;
+      const title = {failed: '星图补全失败', interrupted: '星图补全中断', stopped: '星图补全已停止'}[task.status]
+        || (succeeded === 0 ? '星图补全无成功' : allSucceeded ? '星图补全全部成功'
+          : succeeded > 0 ? '星图补全部分成功' : report === 0 ? '星图补全暂无正式条目' : '星图补全结果待核实');
+      const description = (succeeded === null ? '本轮补全成功数待同步；' : `本轮补全成功 ${succeeded}/${requested}；`)
+        + (report === null ? '正式报告条目待同步，请查看候选核验状态。'
+          : `正式报告 ${report} 条；` + (report > 0 ? '仅核验通过的条目进入正式报告；其余资料请查看候选中的补全说明。'
+            : '暂无正式报告条目，请查看候选中的补全说明，处理后可重新补全。'));
+      return {title, description, succeeded, allSucceeded, report};
+    }
+
+    async function workflowRequest(url, body, method = 'POST') {
+      const res = await fetch(url, body === undefined ? {} : {
+        method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(typeof data.error === 'string' ? data.error : data.error?.message || data.detail || '请求失败');
+      return data;
+    }
+
+    function ensureTaskPolling() {
+      if (!pollInterval) pollInterval = setInterval(checkGlobalStatus, 2500);
+    }
+
+    function displayTaskProgress(task) {
+      activeTask = task;
+      activeTaskId = validId(task.id ?? task.task_id);
+      try { sessionStorage.setItem('creator-bd-active-task', String(activeTaskId)); } catch (e) {}
+      progressReceivedAt = performance.now();
+      progressConnected = true;
+      renderTaskProgress();
+      renderPlatformStates();
+      if (!searchEnded(task)) ensureTaskPolling();
+    }
+
+    function renderTaskProgress() {
+      if (!activeTask || !activeTaskId) return;
+      document.getElementById('taskProgress').classList.remove('hidden');
+      // Elapsed time is anchored to persisted server timing, never to page load.
+      let elapsed = activeTask.elapsed_seconds;
+      if (elapsed == null && activeTask.started_at && activeTask.finished_at) {
+        elapsed = (Date.parse(activeTask.finished_at) - Date.parse(activeTask.started_at)) / 1000;
+      }
+      const running = !searchEnded(activeTask) && !activeTask.finished_at;
+      if (elapsed != null && running && progressConnected) elapsed += (performance.now() - progressReceivedAt) / 1000;
+      const seconds = Math.max(0, Math.floor(Number(elapsed) || 0));
+      const time = elapsed == null ? '耗时待同步' : `${String(Math.floor(seconds / 60)).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}`;
+      const counts = activeTask.counts || {};
+      const labels = {discovered: '发现', eligible: '可选', pending: '待核实', rejected: '不符合', selected: '已选', report: '报告', qualified: '达标', target: '目标'};
+      const countText = Object.entries(labels).map(([key, label]) => `${label} ${counts[key] == null ? '待同步' : formatMetric(counts[key])}`).join(' · ');
+      const stopping = activeTask.stop_requested && !searchEnded(activeTask);
+      const enrichmentPhase = activeTask.status === 'enriching' ? '星图补全中'
+        : searchEnded(activeTask) && Object.hasOwn(activeTask.progress || {}, 'enrichment_requested')
+          ? enrichmentOutcome(activeTask).title : null;
+      const xingtuBlocked = activeTask.progress?.platform === 'xingtu' && activeTask.status === 'blocked';
+      const phase = stopping ? '正在停止' : enrichmentPhase || (xingtuBlocked ? '星图检索受阻，需检查登录或权限' : null) || phaseLabels[activeTask.step] || phaseLabels[activeTask.status] || activeTask.step || activeTask.status || '状态待同步';
+      document.getElementById('taskProgressText').textContent = `${progressConnected ? '' : '连接中断 · '}${phase} · ${time} · ${countText}${activeTask.message ? ' · ' + activeTask.message : ''}`;
+      const stop = document.getElementById('stopTaskBtn');
+      stop.hidden = searchEnded(activeTask) || activeTask.status === 'enriching';
+      stop.disabled = stopping || !progressConnected;
+    }
+
+    async function stopCurrentTask() {
+      if (!activeTaskId || searchEnded(activeTask) || activeTask.stop_requested) return;
+      const id = activeTaskId;
+      activeTask.stop_requested = true;
+      renderTaskProgress();
+      try {
+        await workflowRequest(`/api/tasks/${id}/stop`, {});
+        ensureTaskPolling();
+      } catch (e) {
+        activeTask.stop_requested = false;
+        showToast('停止请求失败: ' + e.message, false);
+        renderTaskProgress();
+      }
+    }
+
+    async function openCandidateDrawer(taskId) {
+      const id = validId(taskId);
+      if (!id) return;
+      const drawer = document.getElementById('candidateDrawer');
+      if (drawer.classList.contains('hidden')) drawerReturnFocus = document.activeElement;
+      switchTab('CHAT');
+      candidateTaskId = id;
+      drawer.classList.remove('hidden');
+      document.getElementById('viewCHAT').classList.add('drawer-open');
+      syncCandidateDrawerMode();
+      if (drawerMobileMedia.matches) document.getElementById('closeCandidateDrawerBtn').focus();
+      else drawer.focus();
+      await loadCandidates(id);
+    }
+
+    function closeCandidateDrawer() {
+      const drawer = document.getElementById('candidateDrawer');
+      if (drawer.classList.contains('hidden')) return;
+      navigationRevision++;
+      closeCandidateDetail(false);
+      drawer.classList.add('hidden');
+      document.getElementById('viewCHAT').classList.remove('drawer-open');
+      cancelCandidateEnrichment();
+      syncCandidateDrawerMode();
+      const target = drawerReturnFocus;
+      drawerReturnFocus = null;
+      if (target instanceof HTMLElement && target.isConnected && target.getClientRects().length && !target.closest('[inert]')) target.focus();
+      else document.getElementById('progressCandidatesBtn').focus();
+    }
+
+    function mobileCandidateDrawerOpen() {
+      return drawerMobileMedia.matches && !document.getElementById('candidateDrawer').classList.contains('hidden');
+    }
+
+    function syncCandidateDrawerMode() {
+      const drawer = document.getElementById('candidateDrawer');
+      if (mobileCandidateDrawerOpen()) {
+        drawer.setAttribute('role', 'dialog');
+        drawer.setAttribute('aria-modal', 'true');
+        const main = document.querySelector('body > main');
+        const background = [...document.body.children].filter(node => node !== main);
+        background.push(...[...main.children].filter(node => node !== drawer));
+        background.forEach(node => {
+          if (!drawerInertStates.has(node)) drawerInertStates.set(node, node.inert);
+          node.inert = true;
+        });
+        if (!drawer.contains(document.activeElement)) document.getElementById('closeCandidateDrawerBtn').focus();
+      } else {
+        drawer.removeAttribute('role');
+        drawer.removeAttribute('aria-modal');
+        drawerInertStates.forEach((wasInert, node) => { node.inert = wasInert; });
+        drawerInertStates.clear();
+      }
+    }
+
+    function candidateDrawerFocusableElements() {
+      return [...document.getElementById('candidateDrawer').querySelectorAll('button, a[href], input, select, textarea, summary, [tabindex]')]
+        .filter(node => !node.disabled && node.tabIndex >= 0 && node.getClientRects().length);
+    }
+
+    function trapCandidateDrawerFocus(event) {
+      if (event.key !== 'Tab' || !mobileCandidateDrawerOpen()) return;
+      const focusable = candidateDrawerFocusableElements();
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      const outside = !document.getElementById('candidateDrawer').contains(document.activeElement);
+      if (!first) {
+        event.preventDefault();
+        document.getElementById('candidateDrawer').focus();
+      } else if (event.shiftKey && (document.activeElement === first || outside)) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (document.activeElement === last || outside)) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+
+    function taskChoices(taskId) {
+      if (!candidateChoices.has(taskId)) candidateChoices.set(taskId, new Map());
+      return candidateChoices.get(taskId);
+    }
+
+    function candidateStatusOf(c) {
+      return ['eligible', 'pending', 'rejected'].includes(c?.candidate_status) ? c.candidate_status : 'pending';
+    }
+
+    function candidateStatusLabel(status) {
+      return {eligible: '可选', pending: '待核实', rejected: '不符合'}[status] || '待核实';
+    }
+
+    function formatCompact(value) {
+      if (value === null || value === undefined || value === '') return '—';
+      const number = Number(value);
+      if (!Number.isFinite(number)) return '—';
+      if (Math.abs(number) >= 10000) {
+        const wan = number / 10000;
+        return (wan >= 10 ? Math.round(wan) : Math.round(wan * 10) / 10).toString().replace(/\.0$/, '') + '万';
+      }
+      return Math.round(number).toLocaleString();
+    }
+
+    async function loadCandidates(taskId) {
+      const id = validId(taskId);
+      if (!id) return;
+      const sequence = ++candidateLoadSequence;
+      if (candidateTaskId !== id) {
+        cancelCandidateEnrichment();
+        candidateFilter = 'eligible';
+        closeCandidateDetail(false);
+      }
+      candidateTaskId = id;
+      candidatesLoaded = false;
+      candidateLoadError = '正在加载候选...';
+      renderCandidates();
+      try {
+        const data = await workflowRequest(`/api/tasks/${id}/candidates?view=all`);
+        if (sequence !== candidateLoadSequence || id !== candidateTaskId) return;
+        if (!data.task || !Array.isArray(data.creators)) throw new Error('候选响应格式无效');
+        candidateTask = data.task;
+        candidateCreators = data.creators;
+        candidateSummary = data.summary || data.task.counts || {};
+        candidatesLoaded = true;
+        candidateLoadError = '';
+        if (!activeTaskId || activeTaskId === id) displayTaskProgress({...data.task, id});
+        updateCandidateSummary();
+        renderCandidates();
+        if (candidateDetailId && candidateCreators.some(c => validId(c.creator_id ?? c.id) === candidateDetailId)) {
+          renderCandidateDetail();
+        } else if (candidateDetailId) {
+          closeCandidateDetail(false);
+        }
+      } catch (e) {
+        if (sequence !== candidateLoadSequence) return;
+        candidateLoadError = '加载失败，请刷新重试: ' + e.message;
+        candidateSummary = {};
+        candidatesLoaded = false;
+        renderCandidates();
+        updateCandidateSummary();
+      }
+    }
+
+    function updateCandidateSummary() {
+      const counts = candidateSummary || {};
+      const total = counts.discovered ?? counts.candidates ?? candidateCreators.length;
+      const eligible = counts.eligible ?? candidateCreators.filter(c => candidateStatusOf(c) === 'eligible').length;
+      const pending = counts.pending ?? candidateCreators.filter(c => candidateStatusOf(c) === 'pending').length;
+      const rejected = counts.rejected ?? candidateCreators.filter(c => candidateStatusOf(c) === 'rejected').length;
+      const summary = document.getElementById('candidateSummary');
+      if (!candidateTask) {
+        summary.textContent = candidateLoadError || '候选尚未加载';
+      } else {
+        const phase = candidateTask.progress?.platform === 'xingtu' && candidateTask.status === 'blocked'
+          ? '星图检索受阻，需检查登录或权限' : phaseLabels[candidateTask.status] || candidateTask.status;
+        summary.textContent = `#${candidateTaskId} ${candidateTask.keyword || candidateTask.name || ''} · ${phase} · 发现 ${total} / 可选 ${eligible} / 待核实 ${pending} / 不符合 ${rejected}`;
+      }
+      const filterCounts = {eligible, pending, rejected};
+      document.querySelectorAll('[data-filter-count]').forEach(node => {
+        const value = filterCounts[node.dataset.filterCount];
+        node.textContent = value == null ? '0' : String(value);
+      });
+      document.querySelectorAll('[data-candidate-filter]').forEach(button => {
+        button.setAttribute('aria-pressed', String(button.dataset.candidateFilter === candidateFilter));
+      });
+      const review = document.getElementById('reviewPendingBtn');
+      const pauseReason = candidateTask?.progress?.pause_reason;
+      if (searchEnded(candidateTask) && pending > 0) {
+        review.classList.remove('hidden');
+        review.textContent = pauseReason === 'topic_review_budget' ? '继续审核' : '补审待核实';
+      } else {
+        review.classList.add('hidden');
+      }
+    }
+
+    function selectedCandidateIds() {
+      const choices = taskChoices(candidateTaskId);
+      return candidateCreators.map(c => validId(c.creator_id ?? c.id)).filter(id => {
+        const choice = choices.get(id);
+        return id && choice?.selected && !choice.excluded;
+      });
+    }
+
+    function excludedCandidateIds() {
+      return candidateCreators.map(c => validId(c.creator_id ?? c.id)).filter(id => id && taskChoices(candidateTaskId).get(id)?.excluded);
+    }
+
+    async function saveCandidateSelection() {
+      if (!candidatesLoaded || !searchEnded(candidateTask) || selectionSaving || enrichmentSubmitting) return;
+      const id = candidateTaskId;
+      const payload = {creator_ids: selectedCandidateIds(), excluded_ids: excludedCandidateIds()};
+      selectionSaving = true;
+      cancelCandidateEnrichment();
+      renderCandidates();
+      try {
+        await workflowRequest(`/api/tasks/${id}/selection`, payload, 'PATCH');
+        if (id === candidateTaskId) {
+          document.getElementById('candidateActionStatus').textContent = '选择已保存，尚未提交星图补全';
+          await loadCandidates(id);
+        }
+      } catch (e) {
+        if (id === candidateTaskId) {
+          document.getElementById('candidateActionStatus').textContent = '选择保存失败: ' + e.message;
+        }
+      } finally {
+        selectionSaving = false;
+        renderCandidates();
+      }
+    }
+
+    function updateCandidateControls() {
+      const selected = selectedCandidateIds();
+      document.getElementById('candidateSelectionCount').textContent = `已选 ${selected.length} 位`;
+      const disabled = !candidatesLoaded || !searchEnded(candidateTask) || enrichmentSubmitting || selectionSaving;
+      const selectedStatuses = selected.map(id => candidateStatusOf(
+        candidateCreators.find(c => validId(c.creator_id ?? c.id) === id)));
+      const allEligible = selectedStatuses.every(status => status === 'eligible');
+      const confirm = document.getElementById('confirmEnrichmentBtn');
+      confirm.disabled = disabled || !selected.length || !allEligible;
+      confirm.textContent = selected.length ? `确认补全 (${selected.length})` : '确认补全';
+      document.getElementById('saveCandidateSelectionBtn').disabled = disabled;
+      if (selected.length && !allEligible) {
+        document.getElementById('candidateActionStatus').textContent = '有尚未通过审核的选择；请补审或取消勾选后再补全。';
+      }
+      updateCandidateSummary();
+    }
+
+    function missingText(value) {
+      return (Array.isArray(value) ? value.join('、') : value) || '无已记录缺项';
+    }
+
+    function postEvidenceUrl(post) {
+      const url = safeHttpUrl(post.url || post.share_url || post.post_url, '');
+      if (url) return url;
+      const id = String(post.aweme_id || '');
+      return /^\d{1,30}$/.test(id) ? 'https://www.douyin.com/video/' + id : '#';
+    }
+
+    function candidateMatchesFilter(c) {
+      return candidateStatusOf(c) === candidateFilter;
+    }
+
+    function renderCandidates() {
+      const list = document.getElementById('candidateList');
+      const detail = document.getElementById('candidateDetail');
+      const filters = document.getElementById('candidateFilters');
+      const detailOpen = !!candidateDetailId;
+      list.hidden = detailOpen;
+      filters.hidden = detailOpen;
+      detail.hidden = !detailOpen;
+      list.replaceChildren();
+      updateCandidateSummary();
+      if (!candidatesLoaded) {
+        const empty = document.createElement('div');
+        empty.className = 'candidate-empty';
+        empty.textContent = candidateLoadError || '候选尚未加载，请刷新';
+        list.appendChild(empty);
+        updateCandidateControls();
+        return;
+      }
+      const choices = taskChoices(candidateTaskId);
+      const visible = candidateCreators.filter(candidateMatchesFilter);
+      if (!visible.length) {
+        const empty = document.createElement('div');
+        empty.className = 'candidate-empty';
+        const total = candidateSummary.discovered ?? candidateSummary.candidates ?? candidateCreators.length;
+        if (candidateTask?.status === 'blocked') {
+          empty.textContent = candidateTask.progress?.platform === 'xingtu'
+            ? `星图检索受阻：${total === 0 ? '尚未取得任何候选账号' : `已发现 ${total} 个账号，已有线索保留`}。请在平台设置检查当前星图登录与账号权益；权限不足需开通相应权益，处理后重新执行原任务。这不是筛选后无人符合。`
+            : total === 0
+            ? '检索受阻：抖音要求人工验证，尚未取得任何候选账号。完成采集会话的验证后，请重新执行原任务；这不是筛选后无人符合。'
+            : `检索受阻：已发现 ${total} 个账号，但后续查询被平台验证拦截。已有线索保留，完成验证后再继续检索。`;
+        } else if (candidateFilter === 'eligible') {
+          empty.textContent = `本轮共发现 ${total} 位，暂无通过数值与方向初筛的可选候选；${candidateSummary.pending ?? 0} 位待核实。原始线索仍保留在知识库。`;
+        } else if (candidateFilter === 'pending') {
+          empty.textContent = `本分类暂无待核实账号；可查看可选或不符合，或刷新候选。`;
+        } else {
+          empty.textContent = `本分类暂无不符合账号；已知不达标的原始线索会保留在知识库。`;
+        }
+        list.appendChild(empty);
+        updateCandidateControls();
+        return;
+      }
+      visible.forEach(c => {
+        const id = validId(c.creator_id ?? c.id);
+        if (!id) return;
+        if (!choices.has(id)) choices.set(id, {selected: !!c.selected, excluded: !!c.excluded});
+        const choice = choices.get(id);
+        const status = candidateStatusOf(c);
+        const selectable = status === 'eligible';
+        const blocked = !searchEnded(candidateTask) || enrichmentSubmitting || selectionSaving;
+        const checkboxDisabled = blocked || (!selectable && !(choice.selected && !choice.excluded));
+        const row = document.createElement('article');
+        row.className = 'candidate-row';
+        row.dataset.creatorId = String(id);
+        row.innerHTML = `
+          <input type="checkbox" data-candidate-select="${id}" aria-label="选择 ${escapeHtml(c.nickname || '未命名')}" ${choice.selected && !choice.excluded ? 'checked' : ''} ${checkboxDisabled ? 'disabled' : ''}>
+          <button type="button" class="candidate-name" data-candidate-detail="${id}" title="${escapeHtml(c.nickname || '未命名')}">${escapeHtml(c.nickname || '未命名')}</button>
+          <span class="candidate-status status-${status}">${candidateStatusLabel(status)}</span>
+          <button type="button" class="candidate-open" data-candidate-detail="${id}" aria-label="查看详情">›</button>
+          <div class="candidate-metrics">${escapeHtml(creatorSourceLabel(c))} · 粉丝 ${formatCompact(c.followers)} · 均赞 ${formatCompact(c.avg_likes ?? c.latest_avg_likes)} · 最高赞 ${formatCompact(c.max_likes ?? c.latest_max_likes)}</div>
+        `;
+        row.querySelector('[data-candidate-select]').addEventListener('change', event => {
+          if (!candidatesLoaded || selectionSaving || enrichmentSubmitting || !searchEnded(candidateTask)) return;
+          if (!selectable && event.target.checked) {
+            event.target.checked = false;
+            document.getElementById('candidateActionStatus').textContent = '该账号尚未通过审核，请先在“待核实”中补审。';
+            return;
+          }
+          choice.selected = event.target.checked;
+          cancelCandidateEnrichment();
+          updateCandidateControls();
+        });
+        row.querySelectorAll('[data-candidate-detail]').forEach(button => {
+          button.addEventListener('click', () => openCandidateDetail(id, button));
+        });
+        list.appendChild(row);
+      });
+      updateCandidateControls();
+    }
+
+    function openCandidateDetail(id, opener) {
+      const creator = candidateCreators.find(c => validId(c.creator_id ?? c.id) === id);
+      if (!creator) return;
+      candidateDetailId = id;
+      candidateDetailReturnFocus = opener || document.activeElement;
+      candidateListScrollTop = document.getElementById('candidateList').scrollTop;
+      document.getElementById('candidateList').hidden = true;
+      document.getElementById('candidateFilters').hidden = true;
+      document.getElementById('candidateDetail').hidden = false;
+      renderCandidateDetail();
+      document.getElementById('candidateDetailBack')?.focus();
+    }
+
+    function closeCandidateDetail(restoreFocus = true) {
+      if (!candidateDetailId) return;
+      candidateDetailId = null;
+      const detail = document.getElementById('candidateDetail');
+      detail.hidden = true;
+      detail.replaceChildren();
+      const list = document.getElementById('candidateList');
+      list.hidden = false;
+      document.getElementById('candidateFilters').hidden = false;
+      list.scrollTop = candidateListScrollTop;
+      if (restoreFocus) {
+        const target = candidateDetailReturnFocus;
+        candidateDetailReturnFocus = null;
+        if (target instanceof HTMLElement && target.isConnected && target.getClientRects().length) target.focus();
+      } else {
+        candidateDetailReturnFocus = null;
+      }
+      renderCandidates();
+    }
+
+    function renderCandidateDetail() {
+      const id = candidateDetailId;
+      const c = candidateCreators.find(item => validId(item.creator_id ?? item.id) === id);
+      const detail = document.getElementById('candidateDetail');
+      if (!c) { closeCandidateDetail(false); return; }
+      const choice = taskChoices(candidateTaskId).get(id) || {selected: !!c.selected, excluded: !!c.excluded};
+      const status = candidateStatusOf(c);
+      const assessment = c.assessment || {};
+      const numeric = assessment.numeric || {};
+      const topic = assessment.topic || {};
+      const e = c.enrichment;
+      const profileUrl = creatorProfileUrl(c);
+      const missing = [c.missing_fields, e?.missing_fields, numeric.missing_fields]
+        .flatMap(value => Array.isArray(value) ? value : value ? [value] : []);
+      const pending = candidateAdmissionProblems.get(`${candidateTaskId}:${id}`) || [];
+      const coreReady = e?.status === 'completed' && e.identity_verified === true && !missing.length;
+      const sourceLabels = {xingtu: '星图内容检索', user: '用户搜索', video: '视频搜索', hybrid: '混合'};
+      const topicLabels = {matched: '方向匹配', not_matched: '方向不符', unknown: '方向待核实'};
+      const patternLabels = {consistent_creator: '持续创作', occasional_poster: '偶发/方向分散', uncertain: '不确定'};
+      const accountLabels = {independent_creator: '个人创作者', creator_team: '内容创作团队', brand_store: '品牌 / 店铺自营', institution: '机构 / 媒体', unknown: '主体待核实'};
+      const sources = (c.discovery_sources || []).map(source =>
+        `<p>${escapeHtml(source.platform === 'xingtu' || source.source_platform === 'xingtu' ? sourceLabels.xingtu : sourceLabels[source.search_type] || source.search_type || '来源待核实')} · ${escapeHtml(source.query || '')}${source.source_post_id ? ' · 视频 ' + escapeHtml(source.source_post_id) : ''} · ${escapeHtml(source.discovered_at || '')}</p>`).join('');
+      const evidence = (c.sample_posts || []).map(post =>
+        `<p><a href="${escapeHtml(postEvidenceUrl(post))}" target="_blank" rel="noopener noreferrer">${escapeHtml(post.desc || '作品')}</a> · 赞 ${formatMetric(post.likes)} · ${escapeHtml(post.post_date || '时间待核实')}</p>`).join('');
+      const actions = [];
+      if (status !== 'rejected') {
+        actions.push(`<button data-admit-missing="${id}" class="workflow-button">${coreReady ? '核验并加入报告' : '带缺失加入报告'}</button>`);
+        if (coreReady && pending.length) {
+          actions.push(`<button data-force-admit-missing="${id}" class="workflow-button">带缺失加入报告</button>`);
+        }
+      } else {
+        actions.push('<p class="workflow-error">账号主体、数值或方向不通过，不能加入正式报告；原始线索仍保留在知识库。</p>');
+      }
+      detail.innerHTML = `
+        <div class="candidate-detail-bar">
+          <button id="candidateDetailBack" type="button" class="workflow-button" title="返回候选列表">‹ 返回</button>
+          <strong title="${escapeHtml(c.nickname || '未命名')}">${escapeHtml(c.nickname || '未命名')}</strong>
+          <span class="candidate-status status-${status}">${candidateStatusLabel(status)}</span>
+        </div>
+        <section class="candidate-detail-section">
+          <h4>本轮初筛</h4>
+          <p>${escapeHtml(c.reason || '审核依据待核实')}</p>
+          <p class="workflow-muted">缺失/错误：${escapeHtml(missingText([...new Set(missing)]))}</p>
+          <dl>
+            <div><dt>粉丝量</dt><dd>${formatMetric(c.followers)}</dd></div>
+            <div><dt>近期均赞</dt><dd>${formatMetric(c.avg_likes ?? c.latest_avg_likes)}</dd></div>
+            <div><dt>最高赞</dt><dd>${formatMetric(c.max_likes ?? c.latest_max_likes)}</dd></div>
+            <div><dt>作品更新时间</dt><dd>${escapeHtml(c.latest_post_date || '待核实')}</dd></div>
+            <div><dt>资料采集时间</dt><dd>${escapeHtml(c.captured_at || c.updated_at || '待核实')}</dd></div>
+            <div><dt>抖音号</dt><dd>${escapeHtml(douyinUniqueId(c) || '未获取')}</dd></div>
+            <div><dt>主页</dt><dd>${profileUrl === '#' ? '<span>未获取</span>' : `<a href="${escapeHtml(profileUrl)}" target="_blank" rel="noopener noreferrer">打开主页</a>`}</dd></div>
+          </dl>
+        </section>
+        <section class="candidate-detail-section">
+          <h4>方向审核依据（文本辅助，未观看视频）</h4>
+          <p>账号类型：${escapeHtml(accountLabels[topic.account?.account_type] || '主体待核实')}</p>
+          <p>${escapeHtml(topic.account?.reason || '尚未确认独立创作者身份，不能仅凭关键词相关放行。')}</p>
+          <p>结论：${escapeHtml(topicLabels[topic.topic_status] || '未审核')}${topic.error_code ? ' · ' + escapeHtml(topic.error_code) : ''}</p>
+          <p>样本：可判读 ${formatMetric(topic.sample_count)} 条 · 匹配 ${formatMetric(topic.matched_count)} 条 · 未知 ${formatMetric(topic.unknown_count)} 条${topic.ratio == null ? '' : ' · 比例 ' + Math.round(topic.ratio * 100) + '%'}</p>
+          <p>创作特征：${escapeHtml(patternLabels[topic.creator_pattern] || '不确定')} · 模型：${escapeHtml(topic.model || '未调用')} · 提示词 ${escapeHtml(topic.prompt_version || '—')}</p>
+          <p>${escapeHtml(topic.reason || '暂无方向审核说明')}</p>
+          <p class="workflow-muted">证据作品 ID：${escapeHtml((topic.evidence_ids || []).join('、') || '无')}</p>
+        </section>
+        <section class="candidate-detail-section">
+          <h4>作品证据 (${(c.sample_posts || []).length})</h4>
+          ${evidence || '<p>暂无作品证据</p>'}
+        </section>
+        <section class="candidate-detail-section">
+          <h4>星图与补全</h4>
+          <p>${escapeHtml(e ? enrichmentLabels[e.status] || '待复核' : '待补全')}${e?.captured_at ? ' · ' + escapeHtml(e.captured_at) : ''}</p>
+          ${e && e.status !== 'completed' ? `<p class="workflow-error">补全说明：${escapeHtml(enrichmentFailureReason(e))}</p>` : ''}
+          ${e ? `<p>身份：${e.identity_verified === true ? '已核验' : '未确认'} · 30天播放中位：${formatMetric(e.median_play_30d)}</p>
+            <p>报价：${escapeHtml(e.price_21_60 ?? e.price_status ?? '未公开')}</p>
+            <p><a href="${escapeHtml(safeHttpUrl(e.source_url))}" target="_blank" rel="noopener noreferrer">补全来源</a></p>` : ''}
+          ${audienceSummaryHtml(c)}
+          ${contactSummaryHtml(c)}
+          ${profileSummaryHtml(c)}
+        </section>
+        <section class="candidate-detail-section">
+          <h4>发现来源</h4>
+          ${sources || `<p>${escapeHtml(creatorSourceLabel(c))}</p>`}
+        </section>
+        <section class="candidate-detail-section">
+          <h4>本次操作</h4>
+          <label><input type="checkbox" data-candidate-exclude="${id}" ${choice.excluded ? 'checked' : ''} ${enrichmentSubmitting || selectionSaving || !searchEnded(candidateTask) ? 'disabled' : ''}> 本次排除（保留知识库）</label>
+          ${pending.length ? `<p class="workflow-error">待处理：${escapeHtml(missingText(pending))}</p>` : ''}
+          <div class="candidate-detail-actions">${actions.join('')}</div>
+        </section>
+      `;
+      document.getElementById('candidateDetailBack').addEventListener('click', () => closeCandidateDetail());
+      const exclude = detail.querySelector('[data-candidate-exclude]');
+      if (exclude) exclude.addEventListener('change', event => {
+        if (!candidatesLoaded || selectionSaving || enrichmentSubmitting || !searchEnded(candidateTask)) return;
+        choice.excluded = event.target.checked;
+        if (choice.excluded) choice.selected = false;
+        cancelCandidateEnrichment();
+        renderCandidateDetail();
+        renderCandidates();
+      });
+      const admit = detail.querySelector('[data-admit-missing]');
+      if (admit) admit.addEventListener('click', () => admitCandidate(id, admit));
+      const override = detail.querySelector('[data-force-admit-missing]');
+      if (override) override.addEventListener('click', () => admitCandidate(id, override, true));
+    }
+
+    async function requestCandidateReview() {
+      const id = candidateTaskId;
+      if (!id || enrichmentSubmitting || selectionSaving) return;
+      const button = document.getElementById('reviewPendingBtn');
+      button.disabled = true;
+      try {
+        const data = await workflowRequest(`/api/tasks/${id}/review`, {creator_ids: null});
+        document.getElementById('candidateActionStatus').textContent = '已确认补审，等待审核结果';
+        if (id === candidateTaskId && data.creator_ids) {
+          displayTaskProgress({...candidateTask, status: 'running', finished_at: null,
+            message: '正在补审候选', progress: {...(candidateTask.progress || {}), review_requested: data.creator_ids.length}});
+        }
+        ensureTaskPolling();
+      } catch (e) {
+        document.getElementById('candidateActionStatus').textContent = '补审提交失败: ' + e.message;
+      } finally {
+        button.disabled = false;
+        updateCandidateControls();
+      }
+    }
+
+    function cancelCandidateEnrichment() {
+      confirmedBatch = null;
+      document.getElementById('enrichmentConfirmation').classList.add('hidden');
+    }
+
+    function confirmCandidateEnrichment() {
+      if (!candidatesLoaded || document.getElementById('confirmEnrichmentBtn').disabled) return;
+      confirmedBatch = {taskId: candidateTaskId, ids: selectedCandidateIds(),
+        excluded: excludedCandidateIds()};
+      document.getElementById('enrichmentConfirmationText').textContent = `将补全 ${confirmedBatch.ids.length} 位达人的星图资料。是否提交？`;
+      document.getElementById('enrichmentConfirmation').classList.remove('hidden');
+    }
+
+    async function submitCandidateEnrichment() {
+      if (!confirmedBatch || enrichmentSubmitting || selectionSaving || !candidatesLoaded || !searchEnded(candidateTask)) return;
+      const batch = confirmedBatch;
+      const transition = {taskId: batch.taskId, navigationRevision};
+      const submittedTask = {...candidateTask, status: 'enriching', finished_at: null, id: batch.taskId};
+      if (batch.taskId !== candidateTaskId || JSON.stringify(batch.ids) !== JSON.stringify(selectedCandidateIds())) return cancelCandidateEnrichment();
+      enrichmentSubmitting = true;
+      document.getElementById('submitEnrichmentBtn').disabled = true;
+      updateCandidateControls();
+      try {
+        await workflowRequest(`/api/tasks/${batch.taskId}/enrich`, {creator_ids: batch.ids, excluded_ids: batch.excluded});
+        inFlightEnrichment = transition;
+        displayTaskProgress(submittedTask);
+        cancelCandidateEnrichment();
+        ensureTaskPolling();
+        if (candidateTaskId === batch.taskId) {
+          candidateTask = submittedTask;
+          document.getElementById('candidateActionStatus').textContent = '已排队，等待星图补全结果';
+          await loadCandidates(batch.taskId);
+        }
+      } catch (e) {
+        if (candidateTaskId === batch.taskId) document.getElementById('candidateActionStatus').textContent = '补全提交失败: ' + e.message;
+        else showToast('补全提交失败: ' + e.message, false);
+      } finally {
+        enrichmentSubmitting = false;
+        document.getElementById('submitEnrichmentBtn').disabled = false;
+        renderCandidates();
+      }
+    }
+
+    function enrichmentFailureReason(enrichment) {
+      const reasons = {
+        browser_or_saved_session_unavailable: '浏览器或已保存的登录会话不可用，请检查星图登录后重新补全。',
+        bounded_lookup_timeout: '星图资料读取超时，请稍后重新补全。',
+        market_access_denied: '星图页面访问被拒绝，请检查登录与权限。',
+        login_or_permission_challenge: '星图需要人工登录或权限验证，请完成后重新补全。',
+        search_access_denied: '星图搜索访问被拒绝，请检查账号权限。',
+        search_api_rejected: '星图搜索接口拒绝请求，请检查登录与权限。',
+        no_results_on_requested_search_page: '当前星图搜索页未找到该达人。',
+        no_unique_douyin_identity_mapping: '无法将星图结果唯一对应到该抖音达人，身份尚未确认。',
+        identity_unconfirmed: '账号身份未确认',
+        douyin_identifier_required: '缺少抖音身份标识，无法核验星图身份。',
+        audience_permission_denied: '星图客户权益不足，无法获取粉丝画像',
+        customer_entitlement_required: '星图客户权益等级不足，无法读取更多数据',
+        audience_schema_not_verified: '粉丝画像尚未获取',
+        market_http_error: '星图页面请求失败，请稍后重新补全。',
+        search_http_error: '星图搜索请求失败，请稍后重新补全。',
+        unsupported_search_response: '星图搜索返回格式无法识别，资料未核实。',
+        browser_or_response_failure: '浏览器或星图响应异常，请稍后重新补全。'
+      };
+      const reason = enrichment.reason || enrichment.error?.message || enrichment.error;
+      return reasons[reason] || (typeof reason === 'string' ? reason : '') ||
+        (enrichment.missing_fields || []).join('、') || '未提供具体原因，资料仍待核实。';
+    }
+
+    async function admitCandidate(id, button, forceMissing = false) {
+      if (!candidatesLoaded || !searchEnded(candidateTask) || selectionSaving || button.disabled || taskChoices(candidateTaskId).get(id)?.excluded) return;
+      const c = candidateCreators.find(c => validId(c.creator_id ?? c.id) === id);
+      if (!c) return;
+      const e = c?.enrichment;
+      const allowMissing = forceMissing || !(e?.status === 'completed' && e.identity_verified === true && !(e.missing_fields || []).length && !(c.missing_fields || []).length);
+      if (allowMissing && !confirm('带缺失加入报告？将保留缺失项与人工加入标识，未核实硬条件不计入达标人数。')) return;
+      const taskId = candidateTaskId;
+      button.disabled = true;
+      try {
+        const data = await workflowRequest(`/api/tasks/${taskId}/report`, {creator_ids: [id], allow_missing: allowMissing});
+        if (taskId !== candidateTaskId) return;
+        const count = value => Array.isArray(value) ? value.length : Number(value) || 0;
+        const reasons = Object.values(data.details || {}).flat().join('、');
+        const key = `${taskId}:${id}`;
+        if (count(data.pending)) {
+          const fields = data.details?.[id] || ['报告准入未通过，资料仍待核实'];
+          candidateAdmissionProblems.set(key, Array.isArray(fields) ? fields : [String(fields)]);
+        } else candidateAdmissionProblems.delete(key);
+        document.getElementById('candidateActionStatus').textContent = `已加入 ${count(data.admitted)} 人 · 待处理 ${count(data.pending)} 人${reasons ? ' · ' + reasons : ''}`;
+        await loadCandidates(taskId);
+      } catch (e) {
+        if (taskId === candidateTaskId) document.getElementById('candidateActionStatus').textContent = '加入失败: ' + e.message;
+        else showToast('加入失败: ' + e.message, false);
+      } finally { button.disabled = false; }
+    }
+
+    function escapeHtml(value) {
+      const node = document.createElement('span');
+      node.textContent = String(value ?? '');
+      return node.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    function safeHttpUrl(value, fallback = '#') {
+      try {
+        const url = new URL(String(value ?? ''));
+        if (url.protocol === 'http:' || url.protocol === 'https:') return url.href;
+      } catch (e) {}
+      return fallback;
+    }
+
+    function douyinUniqueId(creator) {
+      const value = String(creator.enrichment?.profile?.unique_id || creator.unique_id || '').trim();
+      return value.startsWith('xingtu:') ? '' : value;
+    }
+
+    function audienceSummaryHtml(creator, compact = false) {
+      const audience = creator.audience ?? creator.enrichment?.audience ?? {};
+      const genders = {male: '男', female: '女', unknown: '未知'};
+      const lines = Object.entries({gender: '性别', age: '年龄', region: '省份'}).map(([key, label]) => {
+        const distribution = audience[key];
+        const entries = distribution && typeof distribution === 'object' && !Array.isArray(distribution)
+          ? Object.entries(distribution).filter(([, ratio]) => typeof ratio === 'number' &&
+              Number.isFinite(ratio) && ratio >= 0 && ratio <= 1).sort((a, b) => b[1] - a[1]) : [];
+        const shown = compact && key === 'region' ? entries.slice(0, 3) : entries;
+        const shares = shown.map(([name, ratio]) => `${key === 'gender' ? genders[name] || name : name} ${
+          (ratio * 100).toLocaleString('zh-CN', {maximumFractionDigits: 1})}%`).join(' · ');
+        return `<p data-audience-dimension="${key}"><strong>${label}：</strong>${escapeHtml(shares || '未获取')}${
+          shown.length < entries.length ? ` · 另 ${entries.length - shown.length} 项（见详情）` : ''}</p>`;
+      });
+      return `<div class="audience-summary">${lines.join('')}</div>`;
+    }
+
+    function creatorWechat(creator) {
+      const contact = creator.enrichment?.contact || creator.contact || {};
+      return contact.status === '已获取' && contact.type === '微信' && typeof contact.value === 'string'
+        ? contact.value.trim() : String(creator.wechat || '').trim();
+    }
+
+    function contactSummaryHtml(creator, compact = false) {
+      const contact = creator.enrichment?.contact || creator.contact || {};
+      const status = contact.status || '未获取';
+      const source = contact.source || '未获取';
+      const url = safeHttpUrl(contact.source_url);
+      const permissions = {session_visible: '当前登录会话可见', not_provided: '平台未提供',
+        unavailable: '暂不可用', not_fetched: '未获取'};
+      return `<div class="contact-summary">
+        <p>星图联系：${escapeHtml(status)}${contact.type ? ' · ' + escapeHtml(contact.type) : ''}</p>
+        ${compact ? '' : `<p>联系值：${escapeHtml(status === '已获取' ? contact.value || '未获取' : '未获取')}</p>`}
+        <p>来源：${escapeHtml(source)}</p>
+        ${compact ? '' : `<p>可见权限：${escapeHtml(permissions[contact.permission] || contact.permission || '未获取')}</p>
+          ${url === '#' ? '<p>来源链接：未获取</p>' : `<p><a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">联系来源</a></p>`}`}
+      </div>`;
+    }
+
+    function profileSummaryHtml(creator) {
+      const profile = creator.enrichment?.profile || {};
+      return '<div class="profile-summary">' + Object.entries({unique_id: '抖音号', uid: '抖音 UID',
+        sec_uid: '抖音 SEC_UID', star_id: '星图 ID'}).map(([key, label]) => {
+        let value = key === 'unique_id' ? douyinUniqueId(creator) : profile[key] || creator[key];
+        if (String(value || '').startsWith('xingtu:')) value = '';
+        return `<p>${label}：${escapeHtml(value || '未获取')}</p>`;
+      }).join('') + '</div>';
+    }
+
+    function creatorProfileUrl(creator) {
+      const value = safeHttpUrl(creator.profile_url);
+      if (!String(creator.sec_uid || '').startsWith('xingtu:') || value === '#') return value;
+      try {
+        const url = new URL(value);
+        if ((url.hostname === 'douyin.com' || url.hostname.endsWith('.douyin.com')) &&
+            decodeURIComponent(url.pathname).includes('/user/xingtu:')) return '#';
+      } catch (e) { return '#'; }
+      return value;
+    }
+
+    function creatorSourceLabel(creator) {
+      const sources = creator.discovery_sources || [];
+      if (creator.source_platform === 'xingtu' || sources.some(source =>
+          [source.search_type, source.platform, source.source_platform].includes('xingtu'))) return '星图内容检索';
+      const labels = {user: '用户搜索', video: '视频搜索', hybrid: '混合'};
+      return [...new Set(sources.map(source => labels[source.search_type]).filter(Boolean))].join(' / ')
+        || '历史线索暂无来源记录';
+    }
+
+    const defaultAvatar = 'https://p3.douyinpic.com/aweme/100x100/aweme-avatar/default.jpeg';
+
+    function formatMetric(value) {
+      if (value === null || value === undefined || value === '') return '待核实';
+      const number = Number(value);
+      return Number.isFinite(number) ? Math.round(number).toLocaleString() : '待核实';
+    }
+
+    function formatPrice(value) {
+      const formatted = formatMetric(value);
+      return formatted === '待核实' ? formatted : '¥' + formatted;
+    }
+
+    // --- Tab Navigation Switcher ---
+    function switchTab(tabId, reportTaskId = null) {
+      const reportTarget = validId(reportTaskId) || (currentTab === 'CHAT' ? activeTaskId : null) || currentSelectedTaskId;
+      navigationRevision++;
+      if (tabId !== 'CHAT') closeCandidateDrawer();
+      stopPlatformPolling();
+      currentTab = tabId;
+      ['CHAT', 'KB', 'REPORT', 'SETTINGS'].forEach(t => {
+        document.getElementById('view' + t).classList.add('hidden');
+        const btn = document.getElementById('nav' + t);
+        btn.classList.remove('bg-indigo-600', 'text-white', 'shadow-md', 'shadow-indigo-600/20');
+        btn.classList.add('text-slate-400', 'hover:text-white', 'hover:bg-slate-800/80');
+      });
+
+      document.getElementById('view' + tabId).classList.remove('hidden');
+      const activeBtn = document.getElementById('nav' + tabId);
+      activeBtn.classList.remove('text-slate-400', 'hover:text-white', 'hover:bg-slate-800/80');
+      activeBtn.classList.add('bg-indigo-600', 'text-white', 'shadow-md', 'shadow-indigo-600/20');
+
+      if (tabId === 'KB') loadKnowledgeBase();
+      if (tabId === 'REPORT') loadTaskReport(reportTarget);
+      if (tabId === 'SETTINGS') {
+        loadSettings();
+        loadPlatformStatus();
+      }
+      if (tabId === 'CHAT' && taskVerification?.accepted) loadPlatformStatus();
+      lucide.createIcons();
+    }
+
+    // --- View 1: Chat Logic ---
+    async function loadChatHistory() {
+      try {
+        const res = await fetch('/api/chat/history');
+        const data = await res.json();
+        renderChatMessages(data.messages || []);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    function renderChatMessages(messages) {
+      const box = document.getElementById('chatMessages');
+      box.innerHTML = '';
+      taskCards.clear();
+      messages.forEach(msg => {
+        appendChatMessageDOM(msg);
+      });
+      box.scrollTop = box.scrollHeight;
+      lucide.createIcons();
+    }
+
+    function appendChatMessageDOM(msg) {
+      const box = document.getElementById('chatMessages');
+      const isUser = msg.role === 'user';
+      const errorMessage = msg.error ? msg.error.message || '模型请求失败' : '';
+      const duplicateError = errorMessage && errorMessage === msg.content;
+      const wrapper = document.createElement('div');
+      wrapper.className = `flex gap-3 ${isUser ? 'justify-end' : 'justify-start'}`;
+      wrapper.style.overflowWrap = 'anywhere';
+      let cardId = null;
+      let reportTaskId = null;
+      let taskAction = 'candidates';
+
+      let contentHtml = '';
+      if (isUser) {
+        contentHtml = `
+          <div class="max-w-[75%] min-w-0 break-words p-3.5 rounded-2xl bg-indigo-600 text-white text-xs leading-relaxed shadow-sm rounded-br-none">
+            ${escapeHtml(msg.content).replace(/\n/g, '<br>')}
+          </div>
+          <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-xs shrink-0">我</div>
+        `;
+      } else {
+        let taskCardHtml = '';
+        if (msg.meta && msg.meta.category) {
+          const tc = msg.meta;
+          cardId = ++taskCardSequence;
+          taskCards.set(cardId, tc);
+          taskCardHtml = `
+            <div class="mt-3 p-3.5 rounded-xl bg-white border border-slate-200/90 shadow-xs space-y-2.5">
+              <div class="flex items-center justify-between pb-2 border-b border-slate-100">
+                <span class="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                  待确认的需求与执行参数
+                </span>
+                <span class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 font-semibold">待确认</span>
+              </div>
+              <div class="grid grid-cols-2 gap-2 text-[11px] text-slate-600">
+                <div><span class="text-slate-400">锁定类目:</span> <span class="font-semibold text-slate-800">${escapeHtml(tc.category)}</span></div>
+                <div><span class="text-slate-400">搜索关键词:</span> <span class="font-semibold text-indigo-600">${escapeHtml(tc.keyword)}${tc.search_queries?.length ? ' ' + escapeHtml(tc.search_queries.filter(q => q !== tc.keyword).map(q => '#' + q).join(' ')) : ''}</span></div>
+                <div><span class="text-slate-400">召回方式:</span> <span class="font-semibold text-slate-800">${({xingtu:'星图内容检索',user:'用户搜索优先（历史来源）',hybrid:'用户搜索 + 视频补充（历史来源）',video:'仅视频搜索（历史来源）'})[tc.discovery_mode] || '星图内容检索'}</span></div>
+                <div><span class="text-slate-400">均赞门槛:</span> <span class="font-semibold text-slate-800">${Number(tc.min_avg_likes) > 0 ? '≥' + escapeHtml(tc.min_avg_likes) + '赞' : '不设硬门槛'}</span></div>
+                <div><span class="text-slate-400">最终交付目标:</span> <span class="font-semibold text-slate-800">${escapeHtml(tc.sample_count)} 位达标达人</span></div>
+                <div><span class="text-slate-400">粉丝量下限:</span> <span>${tc.min_followers == null ? '不限制' : escapeHtml(tc.min_followers)}</span></div>
+                <div><span class="text-slate-400">粉丝量上限:</span> <span>${tc.max_followers == null ? '不限制' : escapeHtml(tc.max_followers)}</span></div>
+                <div><span class="text-slate-400">最高赞门槛:</span> <span>${tc.min_max_likes == null ? '不限制' : escapeHtml(tc.min_max_likes)}</span></div>
+                <div><span class="text-slate-400">活跃天数:</span> <span>${tc.active_days == null ? '不限制' : escapeHtml(tc.active_days) + ' 天内'}</span></div>
+              </div>
+              <div class="text-[11px] text-slate-600">内容偏好（参与公开文本审核）：${escapeHtml((tc.content_preferences || []).join('、')) || '未指定'}</div>
+              <div class="text-[11px] text-slate-600">排除项（参与公开文本审核）：${escapeHtml((tc.exclusions || []).join('、')) || '未指定'}</div>
+              <div class="text-[11px] text-slate-600">方向审核策略：最近最多 10 条 · 至少 ${escapeHtml(tc.topic_min_samples ?? 5)} 条可判读样本 · 匹配比例 ≥ ${Math.round((tc.topic_min_ratio ?? 0.6) * 100)}%</div>
+              <p class="text-[11px] text-amber-700">这是可配置的初始策略，不是行业标准。仅审核公开文本，不观看视频；证据不足会进入待核实，不能据此认定内容质量或投放效果。</p>
+              <p class="text-[11px] text-slate-600">本次执行使用星图内容检索，复用当前星图登录；画像与联系方式以实际权限和返回字段为准。</p>
+              <div class="pt-2 flex items-center gap-2">
+                <button data-execute-card class="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg text-xs flex items-center justify-center gap-1 shadow-xs transition-all disabled:opacity-50">
+                  <i data-lucide="play" class="w-3.5 h-3.5 fill-white"></i>
+                  <span>确认参数并立即执行找人</span>
+                </button>
+              </div>
+            </div>
+          `;
+        } else if (msg.meta && msg.meta.task_finished) {
+          reportTaskId = Number(msg.meta.task_id);
+          if (!Number.isSafeInteger(reportTaskId) || reportTaskId <= 0) reportTaskId = null;
+          const statusLabels = {completed: '搜索已结束，候选待选择', stopped: '搜索已停止', partial: '检索未完整完成', blocked: '检索受阻，需要人工验证', failed: '任务失败', interrupted: '任务中断'};
+          const blocked = msg.meta.status === 'blocked';
+          const enrichment = msg.meta.stage === 'enrichment';
+          const outcome = enrichment ? enrichmentOutcome(msg.meta) : null;
+          const xingtuFailure = msg.meta.platform === 'xingtu' && ['blocked', 'failed'].includes(msg.meta.status) && !enrichment;
+          const reportCount = Number.isSafeInteger(msg.meta.counts?.report) ? msg.meta.counts.report : null;
+          const noEligible = msg.meta.counts?.eligible === 0;
+          const success = msg.meta.status === 'completed' && (enrichment ? outcome.allSucceeded && reportCount > 0 : !noEligible);
+          const tone = success ? 'emerald' : 'amber';
+          const title = enrichment
+            ? outcome.title
+            : xingtuFailure ? '星图检索受阻，需检查登录或权限'
+            : msg.meta.status === 'completed' && noEligible ? '检索结束，暂无可选达人' : statusLabels[msg.meta.status] || '任务状态待核实';
+          const description = enrichment
+            ? outcome.description
+            : xingtuFailure ? '请检查当前星图登录与账号权益；权限不足需开通相应权益。已有线索保留，处理后重新执行，不会自动重启或更换账号。'
+            : blocked
+            ? (msg.meta.counts?.discovered === 0 ? '尚未取得任何候选账号，完成采集会话验证后需重新执行。' : '已有线索保留；完成采集会话验证后再继续检索。')
+            : '请以任务记录与实际采集结果为准';
+          taskAction = xingtuFailure ? 'xingtu-login' : enrichment && reportCount > 0 ? 'report' : blocked && !enrichment ? 'verify' : 'candidates';
+          taskCardHtml = `
+            <div class="mt-3 p-3.5 rounded-xl bg-${tone}-50 border border-${tone}-200 shadow-xs flex flex-wrap gap-2 items-center justify-between">
+              <div>
+                <h4 class="font-bold text-${tone}-900 text-xs flex items-center gap-1">
+                  ${escapeHtml(title)}
+                </h4>
+                <p class="text-[11px] text-${tone}-700 mt-0.5">${escapeHtml(description)}</p>
+              </div>
+              <button data-report-task class="px-3.5 py-1.5 bg-${tone}-600 hover:bg-${tone}-700 text-white font-semibold rounded-lg text-xs flex items-center gap-1 shadow-sm transition-all whitespace-nowrap">
+                <span>${taskAction === 'xingtu-login' ? '查看星图登录与权限' : taskAction === 'verify' ? '查看受阻详情' : taskAction === 'report' ? '查看正式报告' : '查看候选达人'}</span>
+                <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+              </button>
+              ${enrichment && reportCount > 0 ? '<button data-enrichment-candidates class="workflow-button">查看候选补全说明</button>' : ''}
+            </div>
+          `;
+        }
+
+        contentHtml = `
+          <div class="w-8 h-8 rounded-full bg-slate-200 text-slate-700 text-xs flex items-center justify-center shrink-0">BD</div>
+          <div class="max-w-[80%] min-w-0 break-words p-4 rounded-2xl bg-slate-100/90 text-slate-800 text-xs leading-relaxed shadow-xs rounded-tl-none border border-slate-200/60">
+            <div ${duplicateError ? 'role="alert"' : ''}>${escapeHtml(msg.content).replace(/\n/g, '<br>')}</div>
+            ${msg.error && !duplicateError ? '<p role="alert" class="mt-2 text-rose-700">' + escapeHtml(errorMessage) + '</p>' : ''}
+            ${taskCardHtml}
+          </div>
+        `;
+      }
+
+      wrapper.innerHTML = contentHtml;
+      const executeButton = wrapper.querySelector('[data-execute-card]');
+      if (executeButton) executeButton.addEventListener('click', () => triggerExecuteFromChat(cardId, executeButton));
+      const reportButton = wrapper.querySelector('[data-report-task]');
+      if (reportButton) {
+        reportButton.disabled = reportTaskId === null;
+        reportButton.addEventListener('click', () => taskAction === 'xingtu-login' ? openXingtuLogin()
+          : taskAction === 'verify' ? openTaskVerification(reportTaskId)
+          : taskAction === 'report' ? goToReportTab(reportTaskId) : openCandidateDrawer(reportTaskId));
+      }
+      const candidateButton = wrapper.querySelector('[data-enrichment-candidates]');
+      if (candidateButton) {
+        candidateButton.disabled = reportTaskId === null;
+        candidateButton.addEventListener('click', () => openCandidateDrawer(reportTaskId));
+      }
+      box.appendChild(wrapper);
+    }
+
+    async function sendChatMessage() {
+      const input = document.getElementById('chatInput');
+      const text = input.value.trim();
+      if (!text || isSendingChat) return;
+      isSendingChat = true;
+      const sendButton = document.getElementById('chatSendBtn');
+      sendButton.disabled = true;
+      sendButton.setAttribute('aria-busy', 'true');
+      input.value = '';
+
+      // Optimistic append user message
+      appendChatMessageDOM({ role: 'user', content: text });
+      const box = document.getElementById('chatMessages');
+      box.scrollTop = box.scrollHeight;
+
+      // Loading bubble
+      const loadingWrapper = document.createElement('div');
+      loadingWrapper.id = 'chatLoading';
+      loadingWrapper.className = 'flex gap-3 justify-start';
+      loadingWrapper.innerHTML = `
+        <div class="w-8 h-8 rounded-full bg-slate-200 text-slate-700 text-xs flex items-center justify-center shrink-0">BD</div>
+        <div class="p-3 rounded-2xl bg-slate-100 text-slate-500 text-xs flex items-center gap-2">
+          <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-indigo-600"></i>
+          <span>正在等待模型回复...</span>
+        </div>
+      `;
+      box.appendChild(loadingWrapper);
+      box.scrollTop = box.scrollHeight;
+      lucide.createIcons();
+
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ message: text })
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error?.message || data.error || '消息发送失败');
+
+        appendChatMessageDOM({
+          role: 'assistant',
+          id: data.message_id,
+          content: data.reply || data.error?.message || '模型未返回有效回复，请重试。',
+          meta: data.error ? null : data.task_card,
+          error: data.error
+        });
+        box.scrollTop = box.scrollHeight;
+        lucide.createIcons();
+      } catch (err) {
+        appendChatMessageDOM({role: 'assistant', content: '消息发送失败，请稍后重试。', error: {message: err.message}});
+      } finally {
+        loadingWrapper.remove();
+        isSendingChat = false;
+        sendButton.disabled = false;
+        sendButton.removeAttribute('aria-busy');
+        box.scrollTop = box.scrollHeight;
+      }
+    }
+
+    function sendQuickPrompt(promptText) {
+      document.getElementById('chatInput').value = promptText;
+      sendChatMessage();
+    }
+
+    async function triggerExecuteFromChat(cardId, button) {
+      const tc = taskCards.get(cardId);
+      if (!tc || button.disabled) return;
+      button.disabled = true;
+      let started = false;
+      try {
+        const res = await fetch('/api/execute', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            keyword: tc.keyword, count: tc.sample_count, category: tc.category,
+            min_avg_likes: tc.min_avg_likes, active_days: tc.active_days ?? null,
+            min_followers: tc.min_followers ?? 0, max_followers: tc.max_followers ?? null,
+            min_max_likes: tc.min_max_likes ?? 0,
+            content_preferences: tc.content_preferences || [], exclusions: tc.exclusions || [],
+            discovery_mode: 'xingtu',
+            search_queries: tc.search_queries?.length ? tc.search_queries : [tc.keyword],
+            topic_min_samples: tc.topic_min_samples ?? 5,
+            topic_min_ratio: tc.topic_min_ratio ?? 0.6
+          })
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          alert(err.error || '任务启动失败');
+          return;
+        }
+        const queued = await res.json();
+        activeTaskId = validId(queued.task_id);
+        if (activeTaskId) displayTaskProgress({id: activeTaskId, status: 'queued', counts: {target: tc.sample_count}});
+        started = true;
+        button.querySelector('span').textContent = '任务已排队';
+
+        // Add execution progress bubble in chat
+        appendChatMessageDOM({
+          role: 'assistant',
+          content: `已排队【${tc.keyword}】找人任务，最终交付目标 ${tc.sample_count} 位达标达人。候选数不等于交付数；搜索结束或手动停止后统一选择并确认补全。`
+        });
+        const box = document.getElementById('chatMessages');
+        box.scrollTop = box.scrollHeight;
+        lucide.createIcons();
+
+        // Start polling status
+        ensureTaskPolling();
+        await checkGlobalStatus();
+      } catch (e) {
+        alert('请求失败: ' + e);
+      } finally {
+        if (!started) button.disabled = false;
+      }
+    }
+
+    async function checkGlobalStatus() {
+      if (statusChecking) return;
+      statusChecking = true;
+      const polledEnrichment = inFlightEnrichment;
+      try {
+        const st = await workflowRequest('/api/status' + (activeTaskId ? '?task_id=' + activeTaskId : ''));
+        if (polledEnrichment !== inFlightEnrichment) return;
+        platformSearchRunning = st.is_running === true;
+        renderPlatformStates();
+        const task = st.task || st;
+        const id = validId(task.id ?? task.task_id);
+        if (!id) return;
+        const previous = activeTask?.status;
+        displayTaskProgress({...task, id});
+        if (candidateTaskId === id && !document.getElementById('candidateDrawer').classList.contains('hidden')) await loadCandidates(id);
+        if (searchEnded(task) && pollInterval) {
+          clearInterval(pollInterval);
+          pollInterval = null;
+          if ((previous && previous !== task.status) || inFlightEnrichment?.taskId === id) await loadChatHistory();
+        }
+        // Only a batch submitted in this page can cause a report handoff, never history rendering.
+        if (searchEnded(task) && inFlightEnrichment === polledEnrichment && inFlightEnrichment?.taskId === id) {
+          const transition = inFlightEnrichment;
+          inFlightEnrichment = null;
+          if (transition.navigationRevision === navigationRevision &&
+              ['completed', 'enriched', 'partial'].includes(task.status) && Number(task.counts?.report) > 0 &&
+              enrichmentOutcome(task).succeeded !== 0) {
+            goToReportTab(id);
+          }
+        }
+      } catch (e) {
+        progressConnected = false;
+        renderTaskProgress();
+        ensureTaskPolling();
+      } finally { statusChecking = false; }
+    }
+
+    async function clearChat() {
+      if (isSendingChat) return;
+      try {
+        const res = await fetch('/api/chat/history', {method: 'DELETE'});
+        if (!res.ok) throw new Error('清空聊天失败');
+        await loadChatHistory();
+      } catch (e) {
+        showToast(e.message, false);
+      }
+    }
+
+    function goToReportTab(taskId) {
+      switchTab('REPORT', taskId);
+    }
+
+    // --- View 2: Knowledge Base Logic ---
+    function invalidateKnowledgeBase(message) {
+      kbLoaded = false;
+      kbCreators = [];
+      kbSelection.clear();
+      document.getElementById('kbCountBadge').textContent = '0';
+      document.getElementById('kbTableBody').innerHTML = `<tr><td colspan="9" class="py-12 text-center text-slate-500">${escapeHtml(message)}</td></tr>`;
+      document.getElementById('kbImportStatus').textContent = '';
+      document.getElementById('kbPendingBtn').classList.add('hidden');
+      document.getElementById('kbReportBtn').classList.add('hidden');
+      updateKBSelection();
+    }
+
+    async function loadKnowledgeBase() {
+      const sequence = ++kbLoadSequence;
+      invalidateKnowledgeBase('正在加载知识库...');
+      try {
+        const search = document.getElementById('kbSearchInput').value.trim();
+        const params = new URLSearchParams({search, tag: document.getElementById('kbTagFilter').value.trim(),
+          enrichment_status: document.getElementById('kbEnrichmentFilter').value});
+        const fields = {min_followers: 'kbFilterMinFollowers', max_followers: 'kbFilterMaxFollowers',
+          min_avg_likes: 'kbFilterMinAvgLikes', updated_within_days: 'kbFilterUpdatedDays'};
+        const filterStatus = document.getElementById('kbFilterStatus');
+        filterStatus.textContent = '';
+        for (const [key, id] of Object.entries(fields)) {
+          const input = document.getElementById(id);
+          if (input.value === '') continue;
+          if (!input.checkValidity() || !Number.isSafeInteger(Number(input.value))) {
+            filterStatus.textContent = '筛选条件须为有效整数，更新天数为 1–3650';
+            invalidateKnowledgeBase(filterStatus.textContent);
+            return;
+          }
+          params.set(key, input.value);
+        }
+        if (params.has('min_followers') && params.has('max_followers') && Number(params.get('max_followers')) < Number(params.get('min_followers'))) {
+          filterStatus.textContent = '筛选条件：粉丝量上限不能小于下限';
+          invalidateKnowledgeBase(filterStatus.textContent);
+          return;
+        }
+        const data = await workflowRequest('/api/kb?' + params);
+        if (sequence !== kbLoadSequence) return;
+        kbCreators = data.creators || [];
+        kbLoaded = true;
+        document.getElementById('kbCountBadge').textContent = kbCreators.length;
+        renderKBTable(kbCreators);
+        await loadKBTasks();
+      } catch (e) {
+        if (sequence !== kbLoadSequence) return;
+        const message = '知识库加载失败: ' + e.message;
+        invalidateKnowledgeBase(message);
+        document.getElementById('kbFilterStatus').textContent = message;
+        showToast('知识库加载失败: ' + e.message, false);
+      }
+    }
+
+    function filterKnowledgeBase() {
+      loadKnowledgeBase();
+    }
+
+    async function loadKBTasks() {
+      const data = await workflowRequest('/api/tasks');
+      const select = document.getElementById('kbImportTask');
+      const previous = select.value;
+      select.replaceChildren(new Option('选择任务', ''));
+      (data.tasks || []).forEach(t => {
+        if (validId(t.id)) select.add(new Option(`#${t.id} ${t.name || t.keyword || '任务'}`, t.id));
+      });
+      select.value = previous;
+    }
+
+    function updateKBImportMode() {
+      const mode = document.getElementById('kbImportMode').value;
+      document.getElementById('kbImportTask').classList.toggle('hidden', mode !== 'existing');
+      document.getElementById('kbImportBrief').classList.toggle('hidden', mode !== 'new');
+      document.getElementById('kbNumericRequirements').classList.toggle('hidden', mode !== 'new');
+    }
+
+    function updateKBNumericFields() {
+      document.getElementById('kbNumericFields').classList.toggle('hidden', !document.getElementById('kbStructuredRequirements').checked);
+    }
+
+    function kbNumericRequirements(brief) {
+      const number = (id, fallback) => {
+        const input = document.getElementById(id);
+        if (input.value === '') return fallback;
+        if (!input.checkValidity() || !Number.isSafeInteger(Number(input.value))) throw new Error('请填写有效的整数数值条件');
+        return Number(input.value);
+      };
+      const card = {category: '未指定', keyword: brief.slice(0, 200),
+        sample_count: number('kbTargetCount', 5), min_followers: number('kbMinFollowers', 0),
+        max_followers: number('kbMaxFollowers', null), min_avg_likes: number('kbMinAvgLikes', 0),
+        min_max_likes: number('kbMinMaxLikes', 0), active_days: number('kbActiveDays', null),
+        exclusions: [], content_preferences: []};
+      if (card.max_followers !== null && card.max_followers < card.min_followers) throw new Error('粉丝量上限不能小于下限');
+      return card;
+    }
+
+    function updateKBSelection() {
+      document.getElementById('kbSelectionCount').textContent = `已选 ${kbSelection.size} 人`;
+      document.getElementById('kbImportBtn').disabled = !kbLoaded || !kbSelection.size || kbImportBusy;
+      const ids = kbCreators.map(c => validId(c.creator_id ?? c.id)).filter(Boolean);
+      const all = document.getElementById('kbSelectAll');
+      all.disabled = !kbLoaded;
+      all.checked = !!ids.length && ids.every(id => kbSelection.has(id));
+      all.indeterminate = !all.checked && ids.some(id => kbSelection.has(id));
+    }
+
+    function selectAllKB(checked) {
+      if (!kbLoaded) return;
+      kbCreators.forEach(c => {
+        const id = validId(c.creator_id ?? c.id);
+        if (id) checked ? kbSelection.add(id) : kbSelection.delete(id);
+      });
+      renderKBTable(kbCreators);
+    }
+
+    async function importKBSelection() {
+      if (!kbLoaded || !kbSelection.size || kbImportBusy) return;
+      const mode = document.getElementById('kbImportMode').value;
+      const taskId = mode === 'existing' ? validId(document.getElementById('kbImportTask').value) : null;
+      const brief = mode === 'new' ? document.getElementById('kbImportBrief').value.trim() : '';
+      const status = document.getElementById('kbImportStatus');
+      if (mode === 'existing' && !taskId) { status.textContent = '请选择已有任务'; return; }
+      if (mode === 'new' && !brief) { status.textContent = '请填写新需求'; return; }
+      if (brief.length > 2000) { status.textContent = '新需求不能超过 2000 字'; return; }
+      const payload = {creator_ids: [...kbSelection], task_id: taskId, brief, allow_missing: false};
+      if (mode === 'new' && document.getElementById('kbStructuredRequirements').checked) {
+        try { payload.requirements = kbNumericRequirements(brief); }
+        catch (e) { status.textContent = e.message; return; }
+      }
+      kbImportBusy = true;
+      updateKBSelection();
+      try {
+        const data = await workflowRequest('/api/kb/import', payload);
+        const count = value => Array.isArray(value) ? value.length : Number(value) || 0;
+        status.textContent = `${mode === 'list' ? '资料清单' : '报告'}已加入 ${count(data.admitted)} 人 · 待处理 ${count(data.pending)} 人`;
+        kbPendingTaskId = validId(data.task_id);
+        document.getElementById('kbPendingBtn').classList.toggle('hidden', !kbPendingTaskId || !count(data.pending));
+        const reportButton = document.getElementById('kbReportBtn');
+        reportButton.classList.toggle('hidden', !kbPendingTaskId || !count(data.admitted));
+        reportButton.textContent = mode === 'list' ? '查看资料清单' : '查看正式报告';
+      } catch (e) { status.textContent = '加入失败: ' + e.message; }
+      finally { kbImportBusy = false; updateKBSelection(); }
+    }
+
+    async function editKBTags(c) {
+      const id = validId(c.creator_id ?? c.id);
+      if (!id) return;
+      const tags = (c.tags || []).map(t => typeof t === 'string' ? t : t.name || t.tag || '');
+      const value = prompt('标签（逗号分隔，留空清除）', tags.join(', '));
+      if (value === null) return;
+      try {
+        const updated = [...new Set(value.split(/[,，]/).map(t => t.trim()).filter(Boolean))];
+        await workflowRequest(`/api/kb/${id}/tags`, {tags: updated}, 'PATCH');
+        await loadKnowledgeBase();
+      } catch (e) { showToast('标签保存失败: ' + e.message, false); }
+    }
+
+    function renderKBTable(list) {
+      const tbody = document.getElementById('kbTableBody');
+      tbody.innerHTML = '';
+      if (!list || list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="9" class="py-12 text-center text-slate-400">知识库暂无匹配记录</td></tr>';
+        updateKBSelection();
+        return;
+      }
+
+      list.forEach(c => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-50 transition-colors';
+
+        let contactHtml = '<span class="text-slate-400">未留微信</span>';
+        if (c.contacts && c.contacts.length > 0) {
+          contactHtml = c.contacts.map((ct, contactIndex) => `
+            <div class="flex items-center gap-1 font-mono text-[11px] text-slate-800">
+              <span class="text-slate-400 font-sans">${escapeHtml(ct.contact_type)}:</span>
+              <span class="font-bold">${escapeHtml(ct.contact_value)}</span>
+              <button data-copy-contact="${contactIndex}" class="p-0.5 hover:bg-slate-200 rounded text-slate-500" title="复制">
+                <i data-lucide="copy" class="w-3 h-3"></i>
+              </button>
+            </div>
+          `).join('');
+        }
+
+        let activeText = '-';
+        if (c.days_since_latest !== null && c.days_since_latest !== undefined) {
+          activeText = c.days_since_latest <= 7 ? 
+            `<span class="text-emerald-700 font-bold">${escapeHtml(c.days_since_latest)}天前</span>` : 
+            `<span class="text-slate-600">${escapeHtml(c.days_since_latest)}天前</span>`;
+        }
+
+        tr.innerHTML = `
+          <td class="py-3 px-4"><input type="checkbox" data-kb-select="${validId(c.creator_id ?? c.id) || ''}" aria-label="选择 ${escapeHtml(c.nickname)}" ${kbSelection.has(validId(c.creator_id ?? c.id)) ? 'checked' : ''} ${kbLoaded && validId(c.creator_id ?? c.id) ? '' : 'disabled'}></td>
+          <td class="py-3 px-4">
+            <div class="flex items-center gap-2.5">
+              <img src="${escapeHtml(safeHttpUrl(c.avatar_url, defaultAvatar))}" class="w-8 h-8 rounded-full object-cover border border-slate-200">
+              <div>
+                <a href="${escapeHtml(creatorProfileUrl(c))}" target="_blank" rel="noopener noreferrer" class="font-bold text-slate-900 hover:text-indigo-600 flex items-center gap-0.5">
+                  ${escapeHtml(c.nickname)}
+                  <i data-lucide="arrow-up-right" class="w-3 h-3 text-slate-400"></i>
+                </a>
+                <div class="text-[10px] text-slate-400 font-mono">抖音号: ${escapeHtml(douyinUniqueId(c))}</div>
+              </div>
+            </div>
+          </td>
+          <td class="py-3 px-4 font-mono">
+            <div class="font-bold text-slate-900">${c.followers == null ? '待核实' : (c.followers / 10000).toFixed(1) + '万'}</div>
+            <div class="text-[10px] text-slate-400">获赞: ${c.total_likes == null ? '待核实' : (c.total_likes / 10000).toFixed(1) + '万'}</div>
+          </td>
+          <td class="py-3 px-4 font-mono">
+            <div class="font-bold text-slate-800">均赞: ${formatMetric(c.latest_avg_likes)}</div>
+            <div class="text-[10px] text-slate-400">最高: ${formatMetric(c.latest_max_likes)}</div>
+          </td>
+          <td class="py-3 px-4">
+            ${activeText}
+            <div class="text-[10px] text-slate-400 font-mono">${escapeHtml(c.latest_post_date ? String(c.latest_post_date).substring(0, 10) : '-')}</div>
+          </td>
+          <td class="py-3 px-4">${contactHtml}</td>
+          <td class="py-3 px-4">
+            <span class="px-2 py-0.5 rounded text-[10px] font-semibold ${c.star_atlas ? 'bg-indigo-50 text-indigo-700' : 'bg-slate-100 text-slate-500'}">
+              ${escapeHtml(enrichmentLabels[c.enrichment?.status || c.enrichment_status] || (c.star_atlas ? '资料标记（未验证）' : '待核实'))}
+            </span>
+          </td>
+          <td class="py-3 px-4 text-slate-400 font-mono text-[11px]">${escapeHtml(c.first_seen ? String(c.first_seen).substring(0, 10) : '-')}</td>
+          <td class="py-3 px-4">${(c.tags || []).map(t => `<span title="${escapeHtml(typeof t === 'string' ? '来源待核实' : [t.source || '来源待核实', typeof t.basis === 'object' ? JSON.stringify(t.basis) : t.basis || ''].filter(Boolean).join(' · '))}">${escapeHtml(typeof t === 'string' ? t : t.name || t.tag)}</span>`).join(' · ')}
+            <button data-edit-tags="${validId(c.creator_id ?? c.id) || ''}" title="编辑标签" aria-label="编辑标签" class="workflow-button"><i data-lucide="tags" class="w-3 h-3"></i></button></td>
+        `;
+        tr.querySelector('[data-kb-select]').addEventListener('change', event => {
+          if (!kbLoaded) return;
+          const id = validId(c.creator_id ?? c.id);
+          if (id) event.target.checked ? kbSelection.add(id) : kbSelection.delete(id);
+          updateKBSelection();
+        });
+        tr.querySelector('[data-edit-tags]').addEventListener('click', () => editKBTags(c));
+        tr.querySelectorAll('[data-copy-contact]').forEach(button => {
+          const contact = c.contacts[Number(button.dataset.copyContact)];
+          button.addEventListener('click', () => copyToClipboard(contact.contact_value));
+        });
+        tbody.appendChild(tr);
+      });
+      updateKBSelection();
+      lucide.createIcons();
+    }
+
+    // --- View 3: Report & Recommendation Logic (Excel Spreadsheet Mode) ---
+    let reportSearchTerm = '';
+    let hasUnsavedChanges = false;
+    let reportLoadSequence = 0;
+    let reportLoading = false;
+    let reportSaving = false;
+    let reportEditRevision = 0;
+    let reportTask = null;
+
+    function showToast(msg, isSuccess = true) {
+      let toast = document.getElementById('globalToast');
+      if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'globalToast';
+        document.body.appendChild(toast);
+      }
+      toast.className = `fixed bottom-6 right-6 z-50 flex items-center gap-2 px-4 py-3 rounded-2xl text-xs font-bold shadow-2xl transition-all duration-300 transform ${
+        isSuccess ? 'bg-slate-900 text-emerald-400 border border-emerald-500/40 shadow-emerald-950/20' : 'bg-slate-900 text-rose-400 border border-rose-500/40 shadow-rose-950/20'
+      }`;
+      toast.textContent = msg;
+      lucide.createIcons();
+      toast.style.opacity = '1';
+      toast.style.transform = 'translateY(0)';
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(12px)';
+      }, 3200);
+    }
+
+    async function loadTaskReport(taskId) {
+      navigationRevision++;
+      const sequence = ++reportLoadSequence;
+      reportLoading = true;
+      currentSelectedTaskId = null;
+      updateSaveBtnState();
+      try {
+        const url = taskId ? `/api/results?task_id=${taskId}` : '/api/results';
+        const res = await fetch(url);
+        if (!res.ok) throw new Error('正式报告加载失败');
+        const data = await res.json();
+        if (sequence !== reportLoadSequence) return;
+        reportCreators = data.creators || [];
+        currentSelectedTaskId = validId(data.selected_task?.id);
+        if (taskId && currentSelectedTaskId !== validId(taskId)) throw new Error('返回的报告任务不匹配');
+        reportTask = data.selected_task || null;
+        renderReportDeliverySummary();
+        hasUnsavedChanges = false;
+        reportEditRevision++;
+
+        // Populate Task Selector Dropdown
+        const taskSelect = document.getElementById('reportTaskSelect');
+        taskSelect.innerHTML = '';
+        (data.tasks || []).forEach(t => {
+          const opt = document.createElement('option');
+          opt.value = t.id;
+          opt.textContent = `#${t.id} ${t.name || t.keyword || '任务'}`;
+          if (currentSelectedTaskId === t.id) opt.selected = true;
+          taskSelect.appendChild(opt);
+        });
+
+        // Update Report Stats & Table
+        updateReportStats();
+        renderReportTable();
+      } catch (e) {
+        if (sequence !== reportLoadSequence) return;
+        reportCreators = [];
+        currentSelectedTaskId = null;
+        reportTask = null;
+        hasUnsavedChanges = false;
+        updateSaveBtnState();
+        updateReportStats();
+        renderReportTable();
+        document.getElementById('reportDeliverySummary').textContent = '正式报告加载失败，请重试';
+        showToast(e.message, false);
+      } finally {
+        if (sequence === reportLoadSequence) {
+          reportLoading = false;
+          updateSaveBtnState();
+        }
+      }
+    }
+
+    function renderReportDeliverySummary() {
+      const counts = reportTask?.counts || {};
+      const requirements = reportTask?.requirements || {};
+      const qualified = counts.qualified ?? (reportCreators.every(c => typeof c.qualified === 'boolean') ? reportCreators.filter(c => c.qualified).length : null);
+      const target = counts.target ?? requirements.target_count ?? requirements.sample_count ?? reportTask?.sample_count;
+      const information = requirements.report_kind === 'information' || reportTask?.report_kind === 'information' || reportCreators.some(c => c.data_list);
+      document.getElementById('reportDeliverySummary').textContent = information
+        ? `资料清单 · ${reportCreators.length} 条 · 无任务匹配评级`
+        : `正式条目 ${reportCreators.length} · 已核实达标 ${qualified == null ? '待同步' : qualified} · 最终交付目标 ${target ?? '待同步'} · 缺口 ${qualified == null || target == null ? '待同步' : Math.max(0, target - qualified)}`;
+    }
+
+    function updateSaveBtnState() {
+      const btn = document.getElementById('btnSaveAll');
+      const label = document.getElementById('saveBtnLabel');
+      if (!btn || !label) return;
+      btn.disabled = reportLoading || reportSaving || !validId(currentSelectedTaskId);
+      document.getElementById('btnExportReport').disabled = btn.disabled;
+      if (hasUnsavedChanges) {
+        btn.className = 'inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-white bg-amber-500 hover:bg-amber-600 active:bg-amber-700 rounded-xl shadow-md shadow-amber-200 transition-all cursor-pointer whitespace-nowrap animate-pulse';
+        label.textContent = '保存表格修改 (未保存)';
+      } else {
+        btn.className = 'inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 rounded-xl shadow-md shadow-indigo-100 transition-all cursor-pointer whitespace-nowrap';
+        label.textContent = '保存表格修改';
+      }
+    }
+
+    function updateReportStats() {
+      const total = reportCreators.length;
+      document.getElementById('repStatTotal').textContent = total;
+      const high = reportCreators.filter(c => c.recommend_level === '高推荐').length;
+      document.getElementById('repStatHigh').textContent = high;
+      const mid = reportCreators.filter(c => c.recommend_level === '中推荐').length;
+      document.getElementById('repStatMid').textContent = mid;
+      const chk = reportCreators.filter(c => c.recommend_level === '待核实').length;
+      const rej = reportCreators.filter(c => c.recommend_level === '淘汰').length;
+      document.getElementById('repStatRej').textContent = rej;
+
+      // Formula Bar Stats
+      const validPrices = reportCreators.map(c => Number(c.price_21_60) || 0).filter(p => p > 0);
+      const avgPrice = validPrices.length > 0 ? Math.round(validPrices.reduce((a, b) => a + b, 0) / validPrices.length) : 0;
+      document.getElementById('repSummaryAvgPrice').textContent = validPrices.length ? formatPrice(avgPrice) : '待核实';
+
+      const validVVs = reportCreators.map(c => Number(c.median_play_30d) || 0).filter(v => v > 0);
+      const avgVV = validVVs.length > 0 ? Math.round(validVVs.reduce((a, b) => a + b, 0) / validVVs.length) : 0;
+      document.getElementById('repSummaryAvgVV').textContent = validVVs.length ? (avgVV > 10000 ? (avgVV / 10000).toFixed(1) + 'w' : avgVV.toLocaleString()) : '待核实';
+
+      const wechatCount = reportCreators.filter(c => (c.wechat && c.wechat.trim()) || (c.bd_status && c.bd_status !== '未建联')).length;
+      document.getElementById('repSummaryWechatCount').textContent = wechatCount;
+    }
+
+    function handleReportSearch(val) {
+      reportSearchTerm = (val || '').trim().toLowerCase();
+      renderReportTable();
+    }
+
+    function updateCell(creatorId, field, rawValue) {
+      const target = reportCreators.find(c => c.creator_id === creatorId);
+      if (!target) return;
+      if (!['manual_level', 'manual_reason', 'bd_status', 'bd_notes'].includes(field)) return;
+
+      const val = typeof rawValue === 'string' ? rawValue.trim() : rawValue;
+
+      if (target[field] !== val) {
+        target[field] = val;
+        reportEditRevision++;
+        hasUnsavedChanges = true;
+        updateSaveBtnState();
+        updateReportStats();
+        if (field === 'bd_status') {
+          renderReportTable();
+        }
+      }
+    }
+
+    async function saveAllReportChanges() {
+      if (!validId(currentSelectedTaskId) || reportLoading || reportSaving) {
+        showToast('请先选择或创建一个任务', false);
+        return false;
+      }
+      const taskId = currentSelectedTaskId;
+      const revision = reportEditRevision;
+      const loadSequence = reportLoadSequence;
+      const payload = JSON.stringify({task_id: taskId, creators: reportCreators});
+      reportSaving = true;
+      updateSaveBtnState();
+      try {
+        const res = await fetch('/api/results/batch_save', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: payload
+        });
+        const d = await res.json();
+        if (res.ok && d.status === 'ok') {
+          if (taskId !== currentSelectedTaskId || loadSequence !== reportLoadSequence) return false;
+          if (revision !== reportEditRevision) {
+            showToast('已保存提交的版本，仍有未保存修改');
+            return false;
+          }
+          hasUnsavedChanges = false;
+          updateSaveBtnState();
+          showToast('表格修改已保存');
+          renderReportTable();
+          return true;
+        } else {
+          showToast(d.error || '保存失败', false);
+        }
+      } catch (e) {
+        showToast('保存异常: ' + e.message, false);
+      } finally {
+        reportSaving = false;
+        updateSaveBtnState();
+      }
+      return false;
+    }
+
+    async function addNewReportRow() {
+      switchTab('KB');
+    }
+
+    async function deleteReportRow(creatorId) {
+      const taskId = validId(currentSelectedTaskId);
+      if (!taskId || reportLoading || reportSaving) return;
+      if (!confirm('确定从当前报告中移除该达人吗？')) return;
+      try {
+        const res = await fetch('/api/results/delete_row', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            task_id: taskId,
+            creator_id: creatorId
+          })
+        });
+        const d = await res.json();
+        if (res.ok && d.status === 'ok' && taskId === currentSelectedTaskId) {
+          reportCreators = reportCreators.filter(c => c.creator_id !== creatorId);
+          if (reportTask) reportTask = {...reportTask, counts: {...reportTask.counts,
+            report: reportCreators.length,
+            qualified: reportCreators.every(c => typeof c.qualified === 'boolean') ? reportCreators.filter(c => c.qualified).length : null}};
+          reportEditRevision++;
+          renderReportDeliverySummary();
+          updateReportStats();
+          renderReportTable();
+          showToast('已从交付清单移除该达人');
+        }
+      } catch (e) {
+        showToast('删除失败: ' + e.message, false);
+      }
+    }
+
+    function bdStatusBadgeClass(st) {
+      if (st === '已加微') return 'bg-sky-50 text-sky-700 border-sky-300';
+      if (st === '样品寄送中') return 'bg-amber-50 text-amber-700 border-amber-300';
+      if (st === '脚本确认中') return 'bg-indigo-50 text-indigo-700 border-indigo-300';
+      if (st === '已定档') return 'bg-emerald-50 text-emerald-800 border-emerald-300 font-extrabold';
+      if (st === '已流失') return 'bg-rose-50 text-rose-700 border-rose-200';
+      return 'bg-slate-50 text-slate-600 border-slate-200';
+    }
+
+    function renderReportTable() {
+      const tbody = document.getElementById('reportTableBody');
+      tbody.innerHTML = '';
+
+      const filtered = reportCreators.filter(c => {
+        if (currentReportFilter !== 'ALL' && c.recommend_level !== currentReportFilter) {
+          return false;
+        }
+        if (reportSearchTerm) {
+          const matchName = (c.nickname || '').toLowerCase().includes(reportSearchTerm);
+          const matchId = douyinUniqueId(c).toLowerCase().includes(reportSearchTerm);
+          const matchTag = (c.category_tag || '').toLowerCase().includes(reportSearchTerm);
+          const matchWx = (c.wechat || '').toLowerCase().includes(reportSearchTerm);
+          const matchReason = (c.reason || '').toLowerCase().includes(reportSearchTerm);
+          if (!matchName && !matchId && !matchTag && !matchWx && !matchReason) return false;
+        }
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="26" class="py-12 text-center text-slate-400 font-sans">暂无正式报告条目，请先完成候选选择与补全</td></tr>';
+        return;
+      }
+
+      filtered.forEach((c, idx) => {
+        const creatorId = Number(c.creator_id);
+        if (!Number.isSafeInteger(creatorId) || creatorId <= 0) return;
+        const wechat = creatorWechat(c);
+        const tr = document.createElement('tr');
+        const information = c.data_list || c.report_kind === 'information' || c.recommend_level === '资料清单';
+        tr.className = 'hover:bg-slate-50/80 transition-colors border-b border-slate-200';
+
+        let badgeClass = 'bg-amber-50 text-amber-700 border-amber-200';
+        if (c.recommend_level === '高推荐') badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-300';
+        else if (c.recommend_level === '淘汰') badgeClass = 'bg-rose-50 text-rose-700 border-rose-300';
+        else if (c.recommend_level === '待核实') badgeClass = 'bg-slate-100 text-slate-600 border-slate-300';
+
+        let activeBadge = '<span class="text-slate-400 font-sans">未知</span>';
+        if (c.days_since_latest !== null && c.days_since_latest !== undefined) {
+          if (c.days_since_latest <= 3) {
+            activeBadge = `<span class="inline-block px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 font-bold border border-emerald-200 text-[10px]">${escapeHtml(c.days_since_latest)}天前</span>`;
+          } else if (c.days_since_latest <= 14) {
+            activeBadge = `<span class="inline-block px-1.5 py-0.5 rounded bg-sky-50 text-sky-700 font-semibold border border-sky-200 text-[10px]">近2周</span>`;
+          } else {
+            activeBadge = `<span class="inline-block px-1.5 py-0.5 rounded bg-rose-50 text-rose-700 font-semibold border border-rose-200 text-[10px]">停更${escapeHtml(c.days_since_latest)}天</span>`;
+          }
+        }
+
+        const calculatedCpm = (c.median_play_30d > 0 && c.price_21_60 > 0)
+          ? ((c.price_21_60 / c.median_play_30d) * 1000).toFixed(1)
+          : c.expected_cpm;
+
+        tr.innerHTML = `
+          <!-- Sticky Row Number -->
+          <td class="py-2.5 px-2 text-center sticky left-0 bg-white border-r border-slate-200 font-mono text-slate-400 select-none z-10 w-12 text-[11px]">
+            ${idx + 1}
+          </td>
+
+          <!-- 推荐决策 -->
+          <td class="py-2 px-2 border-r border-slate-200 w-28 bg-emerald-50/20">
+            <span class="px-1.5 py-1 rounded border ${badgeClass}">${escapeHtml(c.recommend_level || '未评级')}</span>
+            ${!information && (c.manual_include_missing || c.allow_missing || c.manual_admission || c.admitted_with_missing) ? '<p class="text-amber-700 mt-2">人工带缺失加入</p>' : ''}
+          </td>
+          <td class="py-2 px-2 border-r border-slate-200 w-64 bg-emerald-50/20">
+            <div 
+              class="excel-cell-edit p-1 rounded text-xs text-slate-800 line-clamp-2 max-w-xs focus:line-clamp-none"
+              title="${escapeHtml(c.reason || '')}"
+            >${escapeHtml(c.reason || '')}</div>
+          </td>
+          <td class="py-2 px-2 border-r border-slate-200 w-28">
+            <select data-manual-level="${creatorId}" aria-label="人工最终等级" class="w-full py-1 border border-slate-200 rounded" ${information ? 'disabled' : ''}>
+              ${['', '高推荐', '中推荐', '待核实', '淘汰'].map(level => `<option value="${level}" ${c.manual_level === level ? 'selected' : ''}>${level || '未判断'}</option>`).join('')}
+            </select>
+          </td>
+          <td class="py-2 px-2 border-r border-slate-200 w-64">
+            <textarea data-manual-reason="${creatorId}" aria-label="人工判断理由" class="manual-reason">${escapeHtml(c.manual_reason || '')}</textarea>
+          </td>
+          <td class="py-2 px-2 border-r border-slate-200 w-48 bg-emerald-50/20">
+            <div 
+              contenteditable="false" 
+              onblur="updateCell(${creatorId}, 'risk', this.innerText)"
+              class="excel-cell-edit p-1 rounded text-xs text-rose-700 line-clamp-2 max-w-xs focus:line-clamp-none font-medium"
+              title="${escapeHtml(c.risk || '')}"
+            >${escapeHtml(c.risk || '待核实')}</div>
+          </td>
+
+          <!-- 达人档案 -->
+          <td class="py-2 px-2 border-r border-slate-200 w-44 bg-sky-50/20">
+            <div class="flex items-center gap-2">
+              <img src="${escapeHtml(safeHttpUrl(c.avatar_url, defaultAvatar))}" class="w-6 h-6 rounded-full object-cover shrink-0 border border-slate-200">
+              <div 
+                contenteditable="false" 
+                onblur="updateCell(${creatorId}, 'nickname', this.innerText)"
+                class="excel-cell-edit font-bold text-slate-900 px-1 rounded truncate max-w-[120px]"
+              >${escapeHtml(c.nickname)}</div>
+            </div>
+          </td>
+          <td class="py-2 px-2 border-r border-slate-200 w-32 bg-sky-50/20">
+            <div 
+              contenteditable="false" 
+              onblur="updateCell(${creatorId}, 'unique_id', this.innerText)"
+              class="excel-cell-edit font-mono text-slate-600 px-1 rounded truncate"
+            >${escapeHtml(douyinUniqueId(c))}</div>
+          </td>
+          <td class="py-2 px-2 border-r border-slate-200 w-24 bg-sky-50/20">
+            <div 
+              contenteditable="false" 
+              onblur="updateCell(${creatorId}, 'followers', this.innerText)"
+              class="excel-cell-edit font-mono font-semibold text-slate-800 px-1 rounded text-right"
+            >${formatMetric(c.followers)}</div>
+          </td>
+          <td class="py-2 px-2 border-r border-slate-200 w-36 bg-sky-50/20">
+            <div 
+              contenteditable="false" 
+              onblur="updateCell(${creatorId}, 'category_tag', this.innerText)"
+              class="excel-cell-edit px-1.5 py-0.5 rounded text-[11px] font-medium bg-sky-50 text-sky-800 border border-sky-200 text-center truncate"
+            >${escapeHtml(c.category_tag || '待核实')}</div>
+          </td>
+          <td class="py-2 px-2 border-r border-slate-200 w-16 text-center bg-sky-50/20">
+            <a href="${escapeHtml(creatorProfileUrl(c))}" target="_blank" rel="noopener noreferrer" class="p-1 hover:bg-sky-100 rounded text-sky-600 inline-flex items-center justify-center" title="打开达人主页">
+              <i data-lucide="arrow-up-right" class="w-3.5 h-3.5"></i>
+            </a>
+          </td>
+
+          <!-- 星图商业与报价 -->
+          <td class="py-2 px-2 border-r border-slate-200 w-36 bg-purple-50/20">
+            <div 
+              contenteditable="false" 
+              onblur="updateCell(${creatorId}, 'star_id', this.innerText)"
+              class="excel-cell-edit font-mono text-[11px] text-slate-500 px-1 rounded truncate"
+            >${escapeHtml(c.star_id || c.enrichment?.profile?.star_id || '未获取')}</div>
+          </td>
+          <td class="py-2 px-2 border-r border-slate-200 w-28 bg-purple-50/20">
+            <div 
+              contenteditable="false" 
+              onblur="updateCell(${creatorId}, 'price_1_20', this.innerText)"
+              class="excel-cell-edit font-mono font-bold text-purple-900 px-1 rounded text-right"
+            >${formatPrice(c.price_1_20)}</div>
+          </td>
+          <td class="py-2 px-2 border-r border-slate-200 w-28 bg-purple-50/20">
+            <div 
+              contenteditable="false" 
+              onblur="updateCell(${creatorId}, 'price_21_60', this.innerText)"
+              class="excel-cell-edit font-mono font-bold text-indigo-900 px-1 rounded text-right"
+            >${formatPrice(c.price_21_60)}</div>
+          </td>
+          <td class="py-2 px-2 border-r border-slate-200 w-32 bg-purple-50/20">
+            <div 
+              contenteditable="false" 
+              onblur="updateCell(${creatorId}, 'median_play_30d', this.innerText)"
+              class="excel-cell-edit font-mono font-bold text-slate-800 px-1 rounded text-right"
+            >${formatMetric(c.median_play_30d)}</div>
+          </td>
+          <td class="py-2 px-2 border-r border-slate-200 w-24 bg-purple-50/20 text-right font-mono text-purple-800 font-semibold">
+            ${calculatedCpm == null ? '待核实' : '¥' + escapeHtml(calculatedCpm)}
+          </td>
+          <td data-report-audience="${creatorId}" class="py-2 px-2 border-r border-slate-200 bg-purple-50/20">
+            ${audienceSummaryHtml(c, true)}
+          </td>
+
+          <!-- 内容与活跃表现 -->
+          <td class="py-2 px-2 border-r border-slate-200 w-28 bg-amber-50/20">
+            <div 
+              contenteditable="false" 
+              onblur="updateCell(${creatorId}, 'avg_likes', this.innerText)"
+              class="excel-cell-edit font-mono font-semibold text-slate-800 px-1 rounded text-right"
+            >${formatMetric(c.avg_likes)}</div>
+          </td>
+          <td class="py-2 px-2 border-r border-slate-200 w-28 bg-amber-50/20">
+            <div 
+              contenteditable="false" 
+              onblur="updateCell(${creatorId}, 'max_likes', this.innerText)"
+              class="excel-cell-edit font-mono text-slate-800 px-1 rounded text-right"
+            >${formatMetric(c.max_likes)}</div>
+          </td>
+          <td class="py-2 px-2 border-r border-slate-200 w-28 bg-amber-50/20 text-center font-mono text-slate-500">
+            ${escapeHtml(c.latest_post_date ? String(c.latest_post_date).substring(0, 10) : '-')}
+          </td>
+          <td class="py-2 px-2 border-r border-slate-200 w-28 bg-amber-50/20 text-center">
+            ${activeBadge}
+          </td>
+
+          <!-- 商务建联与跟进 -->
+          <td class="py-2 px-2 border-r border-slate-200 w-36 bg-rose-50/20">
+            <div class="flex items-center justify-between gap-1">
+              <div 
+                contenteditable="false" 
+                onblur="updateCell(${creatorId}, 'wechat', this.innerText)"
+                class="excel-cell-edit font-mono font-bold text-slate-900 px-1 rounded truncate"
+                placeholder="点击填写微信"
+              >${escapeHtml(wechat || '未获取')}</div>
+              ${wechat ? `
+                <button data-copy-wechat class="p-1 hover:bg-rose-100 rounded text-slate-400 hover:text-slate-800 shrink-0" title="复制微信">
+                  <i data-lucide="copy" class="w-3 h-3"></i>
+                </button>
+              ` : ''}
+            </div>
+            ${contactSummaryHtml(c, true)}
+          </td>
+          <td class="py-2 px-2 border-r border-slate-200 w-32 bg-rose-50/20">
+            <div 
+              contenteditable="false" 
+              onblur="updateCell(${creatorId}, 'phone', this.innerText)"
+              class="excel-cell-edit font-mono text-slate-700 px-1 rounded truncate"
+              placeholder="点击填写电话"
+            >${escapeHtml(c.phone || '')}</div>
+          </td>
+          <td class="py-2 px-2 border-r border-slate-200 w-32 bg-rose-50/20">
+            <select 
+              onchange="updateCell(${creatorId}, 'bd_status', this.value)"
+              class="w-full py-1 px-1.5 rounded-lg text-xs font-semibold border ${bdStatusBadgeClass(c.bd_status)} focus:outline-none focus:ring-2 focus:ring-rose-400 cursor-pointer"
+            >
+              <option value="未建联" ${c.bd_status === '未建联' ? 'selected' : ''}>未建联</option>
+              <option value="已加微" ${c.bd_status === '已加微' ? 'selected' : ''}>已加微</option>
+              <option value="样品寄送中" ${c.bd_status === '样品寄送中' ? 'selected' : ''}>寄样中</option>
+              <option value="脚本确认中" ${c.bd_status === '脚本确认中' ? 'selected' : ''}>脚本确认</option>
+              <option value="已定档" ${c.bd_status === '已定档' ? 'selected' : ''}>已定档</option>
+              <option value="已流失" ${c.bd_status === '已流失' ? 'selected' : ''}>已流失</option>
+            </select>
+          </td>
+          <td class="py-2 px-2 border-r border-slate-200 w-56 bg-rose-50/20">
+            <div 
+              contenteditable="true" 
+              onblur="updateCell(${creatorId}, 'bd_notes', this.innerText)"
+              oninput="updateCell(${creatorId}, 'bd_notes', this.innerText)"
+              class="excel-cell-edit p-1 rounded text-xs text-slate-700 line-clamp-1 max-w-xs focus:line-clamp-none"
+              placeholder="双击添加BD备注..."
+            >${escapeHtml(c.bd_notes || '')}</div>
+          </td>
+
+          <!-- 操作栏 -->
+          <td class="py-2 px-2 text-center w-24">
+            <div class="flex items-center justify-center gap-1">
+              <button 
+                onclick="openReportModal(${creatorId})" 
+                class="p-1.5 hover:bg-indigo-50 rounded-lg text-indigo-600 transition-colors"
+                title="查看规则筛选依据与作品"
+              >
+                <i data-lucide="eye" class="w-3.5 h-3.5"></i>
+              </button>
+              <button 
+                onclick="deleteReportRow(${creatorId})" 
+                class="p-1.5 hover:bg-rose-50 rounded-lg text-rose-500 transition-colors"
+                title="删除此行"
+              >
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+          </td>
+        `;
+        const copyButton = tr.querySelector('[data-copy-wechat]');
+        if (copyButton) copyButton.addEventListener('click', () => copyToClipboard(wechat));
+        tr.querySelector('[data-manual-level]').addEventListener('change', event => updateCell(c.creator_id, 'manual_level', event.target.value));
+        tr.querySelector('[data-manual-reason]').addEventListener('blur', event => updateCell(c.creator_id, 'manual_reason', event.target.value));
+        tr.querySelector('[data-manual-reason]').addEventListener('input', event => updateCell(c.creator_id, 'manual_reason', event.target.value));
+        tbody.appendChild(tr);
+      });
+      lucide.createIcons();
+    }
+
+    function setReportFilter(f) {
+      currentReportFilter = f;
+      ['ALL', 'HIGH', 'MID', 'CHK', 'REJ'].forEach(k => {
+        const btn = document.getElementById('repTab' + k);
+        if (btn) {
+          btn.classList.remove('bg-white', 'text-slate-900', 'shadow-sm');
+          btn.classList.add('hover:text-slate-900');
+        }
+      });
+      const activeMap = { 'ALL': 'repTabALL', '高推荐': 'repTabHIGH', '中推荐': 'repTabMID', '待核实': 'repTabCHK', '淘汰': 'repTabREJ' };
+      const activeBtn = document.getElementById(activeMap[f]);
+      if (activeBtn) activeBtn.classList.add('bg-white', 'text-slate-900', 'shadow-sm');
+      renderReportTable();
+    }
+
+    function openReportModal(creatorId) {
+      if (!Number.isSafeInteger(creatorId) || creatorId <= 0) return;
+      const c = reportCreators.find(item => Number(item.creator_id) === creatorId);
+      if (!c) return;
+
+      document.getElementById('modalAvatar').src = safeHttpUrl(c.avatar_url, defaultAvatar);
+      document.getElementById('modalName').textContent = c.nickname;
+      document.getElementById('modalId').textContent = '抖音号: ' + douyinUniqueId(c) + ' | 粉丝: ' + (c.followers == null ? '待核实' : (c.followers / 10000).toFixed(1) + '万');
+      
+      const badge = document.getElementById('modalLevelBadge');
+      badge.textContent = c.recommend_level;
+      badge.className = 'px-2.5 py-0.5 rounded-full font-bold ' + 
+        (c.recommend_level === '高推荐' ? 'badge-high' : (c.recommend_level === '淘汰' ? 'badge-reject' : 'badge-mid'));
+
+      document.getElementById('modalReason').textContent = c.reason || '无规则参考记录';
+      document.getElementById('modalRisk').textContent = c.risk || '待核实';
+      document.getElementById('modalMissing').textContent = c.missing_fields || '无';
+      document.getElementById('modalBio').textContent = c.signature || '（作者未填写个人简介）';
+      document.getElementById('modalProfileLink').href = creatorProfileUrl(c);
+      document.getElementById('modalXingtuDetails').innerHTML = audienceSummaryHtml(c)
+        + contactSummaryHtml(c) + profileSummaryHtml(c);
+
+      const postsContainer = document.getElementById('modalPostsContainer');
+      postsContainer.innerHTML = '';
+      if (!c.sample_posts || c.sample_posts.length === 0) {
+        postsContainer.innerHTML = '<p class="text-slate-400">暂无捕获的作品记录</p>';
+      } else {
+        c.sample_posts.forEach(p => {
+          const item = document.createElement('div');
+          item.className = 'p-2.5 rounded-xl bg-slate-50 border border-slate-200 flex items-start justify-between gap-3';
+          item.innerHTML = `
+            <div class="flex-1">
+              <div class="font-medium text-slate-800 line-clamp-2">${escapeHtml(p.desc || '（无文案标题）')}</div>
+              <div class="text-[10px] text-slate-400 font-mono mt-1">${escapeHtml(p.post_date || '-')}</div>
+            </div>
+            <div class="text-right font-mono text-[11px] whitespace-nowrap">
+              <span class="font-bold text-slate-900">赞 ${formatMetric(p.likes)}</span>
+              <div class="text-slate-400 text-[10px]">评论 ${formatMetric(p.comments)}</div>
+            </div>
+          `;
+          postsContainer.appendChild(item);
+        });
+      }
+
+      document.getElementById('detailModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeModal() {
+      document.getElementById('detailModal').classList.add('hidden');
+    }
+
+    async function downloadCurrentReportExcel() {
+      document.activeElement?.blur();
+      const taskId = validId(currentSelectedTaskId);
+      if (!taskId || reportLoading || reportSaving) {
+        showToast('请先成功加载指定任务的正式报告', false);
+        return;
+      }
+      if (hasUnsavedChanges && !await saveAllReportChanges()) return;
+      if (taskId !== currentSelectedTaskId || reportLoading || hasUnsavedChanges) return;
+      const params = new URLSearchParams({task_id: String(taskId)});
+      if (currentReportFilter !== 'ALL') params.set('recommend_level', currentReportFilter);
+      if (reportSearchTerm) params.set('search', reportSearchTerm);
+      try {
+        const res = await fetch('/api/export?' + params.toString());
+        if (!res.ok) {
+          const error = await res.json();
+          throw new Error(error.error || '导出失败');
+        }
+        const objectUrl = URL.createObjectURL(await res.blob());
+        const link = document.createElement('a');
+        link.href = objectUrl;
+        link.download = '达人筛选清单.xlsx';
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+      } catch (e) {
+        showToast(e.message, false);
+      }
+    }
+
+    // --- View 4: Settings Logic ---
+    function taskVerificationJobMatches() {
+      const login = platformViews.douyin?.login;
+      return !!taskVerification?.accepted && login?.kind === 'search_verification' &&
+        validId(login.task_id) === taskVerification.taskId;
+    }
+
+    function renderTaskVerification() {
+      const panel = document.getElementById('taskVerification');
+      panel.classList.toggle('hidden', !taskVerification);
+      if (!taskVerification) return;
+      const view = platformViews.douyin;
+      const matches = taskVerificationJobMatches();
+      const busy = matches && !!view?.busy;
+      const pending = platformPendingAction?.action === 'task-verify' || platformPendingAction?.action === 'task-cancel';
+      const error = taskVerification.error || (taskVerification.accepted ? platformStatusError : '');
+      panel.setAttribute('aria-busy', String(pending || busy));
+      document.getElementById('taskVerificationTitle').textContent = `#${taskVerification.taskId} · 任务搜索人工验证`;
+      const status = document.getElementById('taskVerificationStatus');
+      status.textContent = error || (pending ? '正在提交浏览器验证请求…' : taskVerification.accepted
+        ? matches ? [view?.label, view?.login?.message || view?.message].filter(Boolean).join(' · ') || '验证请求已受理，请刷新进度。'
+          : '当前平台任务不属于本任务的搜索验证，请刷新进度或等待后重试。'
+        : '请打开任务搜索页进行人工验证。');
+      status.classList.toggle('workflow-error', !!error);
+      document.getElementById('refreshTaskVerificationBtn').disabled = platformLoading || !!platformPendingAction;
+      document.getElementById('retryTaskVerificationBtn').disabled = platformLoading || !!platformPendingAction ||
+        platformTaskBusy() || Object.values(platformViews).some(item => item.busy);
+      const cancel = document.getElementById('cancelTaskVerificationBtn');
+      cancel.hidden = !busy && !pending;
+      cancel.disabled = !busy || !!platformPendingAction || platformLoading;
+    }
+
+    async function openXingtuLogin() {
+      switchTab('SETTINGS');
+      await loadPlatformStatus();
+      await runPlatformAction('xingtu', 'login');
+    }
+
+    async function openTaskVerification(taskId) {
+      const id = validId(taskId);
+      if (!id) return;
+      switchTab('CHAT');
+      closeCandidateDrawer();
+      if (platformLoadPromise) await platformLoadPromise;
+      if (platformPendingAction || (taskVerification?.accepted && platformViews.douyin?.busy)) {
+        if (taskVerification?.taskId !== id) showToast('另一项人工验证正在进行，请先完成或取消。', false);
+        return;
+      }
+      taskVerification = {taskId: id, accepted: false, error: ''};
+      renderTaskVerification();
+      await runTaskVerification();
+    }
+
+    async function runTaskVerification(cancel = false) {
+      if (!taskVerification || platformPendingAction || platformLoading) return;
+      if (cancel ? !taskVerificationJobMatches() || !platformViews.douyin?.busy
+          : platformTaskBusy() || Object.values(platformViews).some(item => item.busy)) return;
+      const expectedJobId = platformViews.douyin?.login?.job_id;
+      if (cancel && (typeof expectedJobId !== 'string' || !expectedJobId.trim())) {
+        stopPlatformPolling();
+        taskVerification.error = '缺少验证任务标识，请刷新验证进度后再取消。';
+        renderTaskVerification();
+        return;
+      }
+      stopPlatformPolling();
+      platformPendingAction = {id: 'douyin', action: cancel ? 'task-cancel' : 'task-verify'};
+      taskVerification.error = '';
+      renderPlatformStates();
+      let accepted = false;
+      try {
+        await workflowRequest(cancel ? '/api/platforms/douyin/cancel' : `/api/tasks/${taskVerification.taskId}/verify`,
+          cancel ? {expected_job_id: expectedJobId} : {});
+        taskVerification.accepted = true;
+        accepted = true;
+      } catch (e) {
+        taskVerification.error = cancel ? '取消验证失败：' + e.message + '。请刷新验证进度后重试。'
+          : '人工验证请求失败：' + e.message + '。请处理后重试。';
+      } finally {
+        platformPendingAction = null;
+        renderPlatformStates();
+      }
+      // An accepted action is not a login result; read the platform job independently.
+      if (accepted) await loadPlatformStatus();
+    }
+
+    function stopPlatformPolling() {
+      clearTimeout(platformPollTimer);
+      platformPollTimer = null;
+    }
+
+    function schedulePlatformPolling() {
+      stopPlatformPolling();
+      if (!platformStatusError && ((currentTab === 'SETTINGS' && Object.values(platformViews).some(view => view.busy)) ||
+          (currentTab === 'CHAT' && taskVerificationJobMatches() && platformViews.douyin?.busy))) {
+        platformPollTimer = setTimeout(loadPlatformStatus, 1500);
+      }
+    }
+
+    function platformTaskBusy() {
+      return platformSearchRunning || !!(activeTask &&
+        (activeTask.is_running === true || (!searchEnded(activeTask) && !activeTask.finished_at)));
+    }
+
+    function renderPlatformStates() {
+      const anyBusy = Object.values(platformViews).some(view => view.busy);
+      const taskBusy = platformTaskBusy();
+      const labels = [];
+      document.getElementById('platformConnectionSummary').textContent = platformStatusError ? '同步失败' :
+        Object.keys(platformViews).length ? '已同步' : '待同步';
+      document.getElementById('platformStatusMessage').textContent = platformStatusError ||
+        (taskBusy ? '搜索任务运行中，暂不可验证或登录平台。' : platformLoading ? '正在同步平台状态…' : '');
+      document.getElementById('platformStatusMessage').className =
+        `text-xs break-words ${platformStatusError ? 'text-rose-700' : 'text-slate-600'}`;
+      document.getElementById('refreshPlatformStatus').disabled = platformLoading || !!platformPendingAction;
+      document.getElementById('platformCards').innerHTML = Object.entries(platformNames).map(([id, name]) => {
+        const view = platformViews[id];
+        const label = platformStatusError ? '状态同步失败' : view?.label || '登录态待同步';
+        const connection = view ? (view.connected ? '能力已连接' : '能力未连接') : '能力待同步';
+        const prefix = id === 'douyin' ? 'Douyin' : 'Xingtu';
+        document.getElementById(`sidebar${prefix}Connection`).textContent = connection;
+        document.getElementById(`sidebar${prefix}Status`).textContent = label;
+        labels.push(`${name}：${connection} · ${label}`);
+        const disabled = !view || !view.connected || platformLoading || !!platformStatusError ||
+          !!platformPendingAction || anyBusy || taskBusy;
+        const buttons = [['check', '验证登录', 'shield-check'], ['login', '重新登录', 'log-in'], ['replace', '更换账号', 'user-round-cog']]
+          .map(([action, text, icon]) => `<button class="workflow-button disabled:opacity-50" data-platform-action="${action}" ${disabled ? 'disabled' : ''}><i data-lucide="${icon}" class="w-3 h-3 inline"></i> ${text}</button>`).join('');
+        return `<div data-platform="${id}" class="p-4 rounded-lg bg-white border border-slate-200 space-y-3 min-w-0" style="overflow-wrap:anywhere" aria-busy="${!!view?.busy || platformPendingAction?.id === id}">
+          <div class="flex items-center justify-between gap-2"><h4 class="font-bold text-slate-800">${name}</h4><span class="text-slate-500">${connection}</span></div>
+          <p class="font-semibold ${view?.status === 'authenticated' && !platformStatusError ? 'text-emerald-700' : 'text-slate-700'}">${escapeHtml(label)}</p>
+          <p class="text-slate-500">${escapeHtml(view?.message || '')}</p>
+          ${view?.checked_at ? `<p class="text-slate-500">最近验证：${escapeHtml(view.checked_at)}</p>` : ''}
+          <p role="status" class="${['failed', 'timeout'].includes(view?.login?.status) ? 'text-rose-700' : 'text-slate-600'}">${escapeHtml(view?.login?.message || '')}</p>
+          <p role="alert" class="text-rose-700">${escapeHtml(platformActionErrors[id] || '')}</p>
+          <div class="flex flex-wrap gap-2">${buttons}${view?.busy ? `<button class="workflow-button disabled:opacity-50" data-platform-action="cancel" ${platformPendingAction || platformLoading ? 'disabled' : ''}><i data-lucide="x" class="w-3 h-3 inline"></i> 取消</button>` : ''}</div>
+        </div>`;
+      }).join('');
+      document.getElementById('platformHeaderStatus').textContent = labels.join('；');
+      document.querySelectorAll('[data-platform-action]').forEach(button => {
+        button.addEventListener('click', () => runPlatformAction(button.closest('[data-platform]').dataset.platform, button.dataset.platformAction));
+      });
+      renderTaskVerification();
+      lucide.createIcons();
+    }
+
+    async function loadPlatformStatus() {
+      if (platformLoadPromise) return platformLoadPromise;
+      if (platformPendingAction) return;
+      stopPlatformPolling();
+      platformLoading = true;
+      renderPlatformStates();
+      platformLoadPromise = (async () => {
+        try {
+          const data = await workflowRequest('/api/platforms/status');
+          if (!Object.keys(platformNames).every(id => data.platforms?.[id])) throw new Error('平台状态响应不完整，请重试');
+          platformViews = Object.fromEntries(Object.keys(platformNames).map(id => [id, data.platforms[id]]));
+          platformStatusError = '';
+        } catch (e) {
+          platformStatusError = '平台状态同步失败：' + e.message;
+        } finally {
+          platformLoading = false;
+          platformLoadPromise = null;
+          renderPlatformStates();
+          schedulePlatformPolling();
+        }
+      })();
+      return platformLoadPromise;
+    }
+
+    async function runPlatformAction(id, action) {
+      if (!Object.hasOwn(platformNames, id) || !['check', 'login', 'replace', 'cancel'].includes(action) ||
+          platformPendingAction || platformLoading) return;
+      const view = platformViews[id];
+      const expectedJobId = view?.login?.job_id;
+      if (!view || (action === 'cancel' ? !view.busy :
+          (!view.connected || platformStatusError || platformTaskBusy() || Object.values(platformViews).some(item => item.busy)))) return;
+      if (action === 'replace' && !confirm(`更换${platformNames[id]}账号？新登录成功前保留现有凭据。`)) return;
+      stopPlatformPolling();
+      platformPendingAction = {id, action};
+      platformActionErrors[id] = '';
+      renderPlatformStates();
+      let succeeded = false;
+      try {
+        const endpoint = action === 'replace' ? 'login' : action;
+        const body = endpoint === 'login' ? {replace: action === 'replace'}
+          : endpoint === 'cancel' && typeof expectedJobId === 'string' && expectedJobId.trim()
+            ? {expected_job_id: expectedJobId} : {};
+        const data = await workflowRequest(`/api/platforms/${id}/${endpoint}`, body);
+        if (!data.platform || data.platform.platform !== id) throw new Error('平台状态响应不完整，请刷新状态');
+        platformViews[id] = data.platform;
+        platformStatusError = '';
+        succeeded = true;
+      } catch (e) {
+        platformActionErrors[id] = '操作失败：' + e.message;
+      } finally {
+        platformPendingAction = null;
+        renderPlatformStates();
+        if (succeeded) schedulePlatformPolling();
+      }
+    }
+
+    async function loadSettings() {
+      try {
+        const res = await fetch('/api/settings');
+        const data = await res.json();
+        const s = data.settings || {};
+        document.getElementById('cfgLlmEnabled').checked = s.llm_enabled === 'true';
+        document.getElementById('cfgLlmProvider').value = s.llm_provider || 'DeepSeek';
+        document.getElementById('cfgLlmModel').value = s.llm_model || 'deepseek-chat';
+        document.getElementById('cfgLlmBaseUrl').value = s.llm_base_url || 'https://api.deepseek.com/v1';
+        document.getElementById('cfgLlmApiKey').value = '';
+        document.getElementById('cfgLlmApiKey').placeholder = s.llm_api_key_configured ? '已配置（留空保留）' : '未配置';
+        document.getElementById('cfgClearLlmKey').checked = false;
+        document.getElementById('cfgDormantLimit').value = s.dormant_days_limit || 60;
+        document.getElementById('cfgActiveLimit').value = s.active_days_limit || 14;
+        document.getElementById('cfgDynamicTTL').value = s.dynamic_ttl_hours || 24;
+      } catch (e) {
+        showToast('设置加载失败', false);
+      }
+    }
+
+    function autoFillProviderDefaults(val) {
+      if (val === 'DeepSeek') {
+        document.getElementById('cfgLlmBaseUrl').value = 'https://api.deepseek.com/v1';
+        document.getElementById('cfgLlmModel').value = 'deepseek-chat';
+      } else if (val === 'OpenAI') {
+        document.getElementById('cfgLlmBaseUrl').value = 'https://api.openai.com/v1';
+        document.getElementById('cfgLlmModel').value = 'gpt-4o-mini';
+      } else if (val === 'Qwen') {
+        document.getElementById('cfgLlmBaseUrl').value = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
+        document.getElementById('cfgLlmModel').value = 'qwen-plus';
+      }
+    }
+
+    async function saveAllSettings() {
+      const ttl = document.getElementById('cfgDynamicTTL');
+      if (!ttl.checkValidity() || !Number.isInteger(Number(ttl.value)) || Number(ttl.value) < 1) {
+        showToast('动态资料有效期须为正整数小时', false);
+        return;
+      }
+      const settings = {
+        llm_enabled: document.getElementById('cfgLlmEnabled').checked ? 'true' : 'false',
+        llm_provider: document.getElementById('cfgLlmProvider').value,
+        llm_model: document.getElementById('cfgLlmModel').value.trim(),
+        llm_base_url: document.getElementById('cfgLlmBaseUrl').value.trim(),
+        llm_api_key: document.getElementById('cfgLlmApiKey').value.trim(),
+        dormant_days_limit: document.getElementById('cfgDormantLimit').value,
+        active_days_limit: document.getElementById('cfgActiveLimit').value,
+        dynamic_ttl_hours: ttl.value,
+      };
+
+      try {
+        const res = await fetch('/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ settings, clear_llm_api_key: document.getElementById('cfgClearLlmKey').checked })
+        });
+        if (res.ok) {
+          await loadSettings();
+          showToast('系统与 API 配置已成功保存！');
+        } else {
+          alert('保存失败');
+        }
+      } catch (e) {
+        alert('保存异常: ' + e);
+      }
+    }
+
+    function togglePasswordVis(id) {
+      const el = document.getElementById(id);
+      el.type = el.type === 'password' ? 'text' : 'password';
+    }
+
+    async function testLlmConnection() {
+      const button = document.getElementById('btnTestLlm');
+      const status = document.getElementById('llmTestStatus');
+      if (button.disabled) return;
+      button.disabled = true;
+      button.setAttribute('aria-busy', 'true');
+      status.textContent = '正在测试连接...';
+      try {
+        const overrides = {
+          llm_enabled: document.getElementById('cfgLlmEnabled').checked ? 'true' : 'false',
+          llm_model: document.getElementById('cfgLlmModel').value.trim(),
+          llm_base_url: document.getElementById('cfgLlmBaseUrl').value.trim()
+        };
+        const key = document.getElementById('cfgLlmApiKey').value.trim();
+        if (key) overrides.llm_api_key = key;
+        const res = await fetch('/api/llm/test', {
+          method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(overrides)
+        });
+        const data = await res.json();
+        if (!res.ok || !data.ok) throw new Error(data.message || '模型连接失败');
+        status.textContent = data.message;
+        status.className = 'text-xs text-emerald-700 break-words';
+      } catch (e) {
+        status.textContent = e.message;
+        status.className = 'text-xs text-rose-700 break-words';
+      } finally {
+        button.disabled = false;
+        button.removeAttribute('aria-busy');
+      }
+    }
+
+    async function previewSystemPrompt() {
+      const button = document.getElementById('btnPreviewPrompt');
+      const preview = document.getElementById('systemPromptPreview');
+      if (button.disabled) return;
+      button.disabled = true;
+      preview.classList.remove('hidden');
+      preview.textContent = '正在加载...';
+      try {
+        const res = await fetch('/api/chat/prompt');
+        if (!res.ok) throw new Error('提示词加载失败');
+        const data = await res.json();
+        preview.textContent = data.version + '\n\n' + data.content;
+      } catch (e) {
+        preview.textContent = e.message;
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    function copyToClipboard(text) {
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('已复制: ' + text);
+      }).catch(err => {
+        showToast('复制失败，请手动复制', false);
+      });
+    }
+
+    // Initialize
+    loadChatHistory();
+    loadPlatformStatus();
+    checkGlobalStatus();
+    setInterval(renderTaskProgress, 1000);
+    document.querySelectorAll('[data-candidate-filter]').forEach(button => {
+      button.addEventListener('click', () => {
+        candidateFilter = button.dataset.candidateFilter || 'eligible';
+        renderCandidates();
+      });
+    });
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape') {
+        if (candidateDetailId) closeCandidateDetail();
+        else closeCandidateDrawer();
+      } else trapCandidateDrawerFocus(event);
+    });
+    document.addEventListener('focusin', event => {
+      if (mobileCandidateDrawerOpen() && !document.getElementById('candidateDrawer').contains(event.target)) {
+        document.getElementById('closeCandidateDrawerBtn').focus();
+      }
+    });
+    drawerMobileMedia.addEventListener('change', syncCandidateDrawerMode);
+    lucide.createIcons();
+  </script>
+</body>
+</html>
